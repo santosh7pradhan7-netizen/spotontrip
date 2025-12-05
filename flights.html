@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Flights - SpotOnTrip</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <nav class="bg-white shadow-md">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-blue-600">SpotOnTrip</a>
+            <div class="space-x-6 hidden md:block">
+                <a href="index.html" class="hover:text-blue-600">Home</a>
+                <a href="about.html" class="hover:text-blue-600">About</a>
+                <a href="flights.html" class="hover:text-blue-600 font-bold">Flights</a>
+                <a href="index.html#contact" class="hover:text-blue-600">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="bg-blue-600 py-10">
+        <div class="container mx-auto px-6">
+            <h1 class="text-3xl font-bold text-white mb-6 text-center">Search Flights</h1>
+            <div class="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto flex flex-col md:flex-row gap-4">
+                <input type="text" placeholder="From (e.g. New York)" class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" placeholder="To (e.g. London)" class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="date" class="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button class="bg-blue-800 text-white font-bold px-8 py-3 rounded-lg hover:bg-blue-900 transition">
+                    Search
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="container mx-auto px-6 py-12">
+        <h2 class="text-2xl font-bold mb-6 text-gray-800">Available Flights</h2>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-4 flex flex-col md:flex-row justify-between items-center hover:shadow-lg transition">
+            <div class="mb-4 md:mb-0">
+                <h3 class="text-xl font-bold text-blue-600">SkyHigh Airlines</h3>
+                <p class="text-gray-500">New York (JFK) &rarr; London (LHR)</p>
+                <p class="text-sm text-gray-400">Non-stop &bull; 7h 20m</p>
+            </div>
+            <div class="text-center md:text-right">
+                <p class="text-3xl font-bold text-gray-800">$450</p>
+                <p class="text-sm text-gray-500 mb-2">per person</p>
+                <button class="bg-green-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-600 transition">Select</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-4 flex flex-col md:flex-row justify-between items-center hover:shadow-lg transition">
+            <div class="mb-4 md:mb-0">
+                <h3 class="text-xl font-bold text-blue-600">Oceanic Airways</h3>
+                <p class="text-gray-500">New York (JFK) &rarr; London (LHR)</p>
+                <p class="text-sm text-gray-400">1 Stop &bull; 10h 45m</p>
+            </div>
+            <div class="text-center md:text-right">
+                <p class="text-3xl font-bold text-gray-800">$380</p>
+                <p class="text-sm text-gray-500 mb-2">per person</p>
+                <button class="bg-green-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-600 transition">Select</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-4 flex flex-col md:flex-row justify-between items-center hover:shadow-lg transition">
+            <div class="mb-4 md:mb-0">
+                <h3 class="text-xl font-bold text-blue-600">Global Jet</h3>
+                <p class="text-gray-500">New York (JFK) &rarr; London (LHR)</p>
+                <p class="text-sm text-gray-400">Non-stop &bull; 7h 05m</p>
+            </div>
+            <div class="text-center md:text-right">
+                <p class="text-3xl font-bold text-gray-800">$520</p>
+                <p class="text-sm text-gray-500 mb-2">per person</p>
+                <button class="bg-green-500 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-600 transition">Select</button>
+            </div>
+        </div>
+
+    </section>
+
+    <footer class="bg-gray-800 text-white py-8 text-center mt-auto">
+        <p>&copy; 2025 SpotOnTrip. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
