@@ -42,7 +42,7 @@ export default function PackagesPage() {
 
     try {
       // 1. Create the Order on our server
-      const res = await fetch('/api/pay/create-order', {
+      const res = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
