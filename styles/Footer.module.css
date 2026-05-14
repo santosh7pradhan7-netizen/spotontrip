@@ -1,0 +1,28 @@
+/* styles/Footer.module.css */
+
+.footer {
+  width: 100%;
+  padding: 20px 0;
+  border-top: 1px solid #eaeaea;
+  display: flex;
+  justify-content: center; /* Center the content horizontally */
+  align-items: center;
+  background-color: #f7f7f7;
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: auto; /* Important: Pushes the footer to the bottom of the viewport/container */
+}
+
+.text {
+  margin: 0;
+}
+
+.link {
+  color: #0070f3;
+  text-decoration: underline;
+  margin-left: 5px;
+}
+
+.link:hover {
+  opacity: 0.8;
+}

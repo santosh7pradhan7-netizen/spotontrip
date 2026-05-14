@@ -1,0 +1,56 @@
+/* --- Global Styling Reset/Base --- */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    /* Use a very light gray background, removing the conflicting 'flex' properties */
+    background-color: #f0f4f8; 
+    margin: 0;
+    padding: 0;
+    /* --- CRITICAL CHANGE: REMOVE THESE LINES --- 
+    display: flex; 
+    justify-content: center;
+    padding-top: 10vh;
+    ---------------------------------------------*/
+}
+
+/* --- Tailwind Utility Replacements (Keep these for input styling consistency) --- */
+
+/* --- Form and Input Styling --- */
+.input-group {
+    display: grid;
+    /* Create a grid layout for flexible input alignment */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+    gap: 15px;
+}
+
+input[type="text"],
+input[type="date"],
+select {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    color: #333;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    appearance: none; 
+}
+
+/* Apply Indigo focus color to match the design */
+input[type="text"]:focus,
+input[type="date"]:focus,
+select:focus {
+    border-color: #4f46e5; /* Indigo 600 */
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); 
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 650px) {
+    .input-group {
+        /* On small screens, stack inputs one per row for better touch targets */
+        grid-template-columns: 1fr; 
+    }
+}
+/* All other custom classes like .search-container, .tab-button, etc. have been removed
+   as they conflict with the Tailwind classes we used in the JSX (e.g., shadows, background).
+   We only keep the necessary raw input styling and grid layout */

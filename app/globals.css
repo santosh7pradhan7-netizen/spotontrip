@@ -1,0 +1,10 @@
+/* app/globals.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fix for fixed header */
+body {
+  padding-top: 64px; /* Height of the header */
+}

@@ -3,69 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpotOnTrip - Coming Soon</title>
-    <style>
-        /* This CSS makes the page look good */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-align: center;
-        }
-
-        .container {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 2rem;
-            border-radius: 15px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            max-width: 80%;
-        }
-
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            letter-spacing: 2px;
-        }
-
-        p {
-            font-size: 1.2rem;
-            margin-top: 0;
-            opacity: 0.9;
-        }
-
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #fff;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 2s linear infinite;
-            margin: 20px auto 0;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <title>Dynamic Tabs Example</title>
+    <link rel="stylesheet" href="styles/global.css">
 </head>
 <body>
 
-    <div class="container">
-        <h1>SpotOnTrip</h1>
-        <p>We are building something amazing.</p>
-        <p>Stay tuned.</p>
-        <div class="loader"></div>
+    <div class="tab-container">
+        
+        <div class="tab-buttons">
+            <button class="tab-button active" onclick="openTab(event, 'Tab1')">Tab 1: Basic Info</button>
+            <button class="tab-button" onclick="openTab(event, 'Tab2')">Tab 2: Details</button>
+            <button class="tab-button" onclick="openTab(event, 'Tab3')">Tab 3: Settings</button>
+        </div>
+
+        <div id="Tab1" class="tab-content">
+            <h3>Content for Tab 1 (Basic Info)</h3>
+            <p>This is the default content that appears when the page loads. It contains essential information.</p>
+            <ul>
+                <li>Item A</li>
+                <li>Item B</li>
+                <li>Item C</li>
+            </ul>
+        </div>
+
+        <div id="Tab2" class="tab-content" style="display:none;">
+            <h3>Content for Tab 2 (Details)</h3>
+            <p>This section provides more in-depth details and specifications related to the topic.</p>
+            <p>A second paragraph of detailed information.</p>
+        </div>
+
+        <div id="Tab3" class="tab-content" style="display:none;">
+            <h3>Content for Tab 3 (Settings)</h3>
+            <p>Use this area for configuration options or user preferences.</p>
+            <form>
+                <input type="checkbox" id="notify" name="notify">
+                <label for="notify"> Enable Notifications</label><br>
+                <input type="text" placeholder="Enter username">
+            </form>
+        </div>
+
     </div>
 
+    <script src="script.js"></script>
 </body>
 </html>

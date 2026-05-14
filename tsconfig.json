@@ -1,3 +1,4 @@
+// tsconfig.json - CORRECTED AND CLEAN CODE
 {
   "compilerOptions": {
     "target": "ES2017",
