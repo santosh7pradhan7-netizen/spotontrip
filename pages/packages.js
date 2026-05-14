@@ -1,118 +1,142 @@
-import { useState } from 'react';
-import Link from 'next/link';
-import Head from 'next/head'; // Added for Razorpay script
+git add .
+    git commit -m "Complete packages UI with Razorpay integration"
+    git push origin master
+    ```
+3.  **Redeploy** on Vercel once (just to be safe).
 
-// Component for the Travel Cards
-function PackageCard({ name, duration, price, keyword, onBook }) {
-  return (
-    <div className="relative overflow-hidden rounded-xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition duration-500 bg-white">
-      <img 
-        src={`https://source.unsplash.com/random/400x300/?${keyword}`} 
-        className="w-full h-64 object-cover" 
-        alt={name}
-      />
-      <div className="p-5">
-        <h3 className="text-2xl font-bold text-gray-900 mb-1">{name}</h3>
-        <p className="text-gray-500 mb-3">{duration}</p>
-        <div className="flex justify-between items-center">
-          <span className="text-xl font-extrabold text-cyan-600">₹{price.toLocaleString('en-IN')}</span>
-          <button 
-            onClick={() => onBook(price, name)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition"
-          >
-            Book Now
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+**Now, when you visit [www.spotontrip.com/packages](http://www.spotontrip.com/packages) and click the button, you should finally see the secure Razorpay payment shieldTo make the "Book Now" button fully functional, responsive, and connected to your new API path, here is the complete code for `pages/packages.js`.
+
+I have optimized this for **SpotOnTrip** by adding the `Script` loader correctly and ensuring the frontend handles the Razorpay popup perfectly.
+
+### The Complete `pages/packages.js`
+```javascript
+import { useState } from 'react';
+import Head from 'next/head';
+import Script from 'next/script';
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+
+const packages = [
+  {
+    id: 1,
+    title: "Summer Trip: Rajpura to River",
+    description: "A 10-minute scenic journey with friends to the best swimming spots.",
+    price: 4999,
+    image: "https://images.unsplash.com/photo-1544365558-35aa4afcf11f?auto=format&fit=crop&q=80&w=800",
+  },
+  {
+    id: 2,
+    title: "Leh-Ladakh Adventure",
+    description: "Explore the majestic mountains and serene lakes of the North.",
+    price: 15999,
+    image: "https://images.unsplash.com/photo-1581791534721-e599344297ad?auto=format&fit=crop&q=80&w=800",
+  },
+  {
+    id: 3,
+    title: "Goa Beach Party",
+    description: "Unwind at the beaches with premium stays and water sports.",
+    price: 8999,
+    image: "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&q=80&w=800",
+  }
+];
 
 export default function PackagesPage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loadingId, setLoadingId] = useState(null);
 
-  // 1. Search Function
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const response = await fetch('/api/travel/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: searchQuery, mode: 'flights' }),
-    });
-    const data = await response.json();
-    setResults(data.data);
-    setLoading(false);
-  };
+  const makePayment = async (packageItem) => {
+    setLoadingId(packageItem.id);
 
-  // 2. Razorpay Payment Function
-  const makePayment = async (amount, title) => {
-    const res = await fetch('/api/pay/create-order', {
-      method: 'POST',
-      body: JSON.stringify({ amount })
-    });
-    const order = await res.json();
+    try {
+      // 1. Create the Order on our server
+      const res = await fetch('/api/pay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          amount: packageItem.price,
+          currency: "INR" 
+        }),
+      });
 
-    const options = {
-      key: "YOUR_RAZORPAY_KEY_ID", // Enter your key here
-      amount: order.amount,
-      currency: "INR",
-      name: "SpotOnTrip",
-      description: `Booking: ${title}`,
-      order_id: order.id,
-      handler: (response) => alert("Booking Successful! ID: " + response.razorpay_payment_id),
-      theme: { color: "#0891b2" }
-    };
+      const orderData = await res.json();
 
-    const paymentObject = new window.Razorpay(options);
-    paymentObject.open();
+      if (!res.ok) throw new Error(orderData.message || "Failed to create order");
+
+      // 2. Initialize Razorpay Options
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Public Key from Vercel
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "SpotOnTrip",
+        description: `Booking for ${packageItem.title}`,
+        order_id: orderData.id,
+        handler: function (response) {
+          // Success Callback
+          alert(`Payment Successful! ID: ${response.razorpay_payment_id}`);
+          window.location.href = "/order-success";
+        },
+        prefill: {
+          name: "Traveler Name",
+          email: "traveler@example.com",
+          contact: "9999999999",
+        },
+        theme: { color: "#2563eb" }, // SpotOnTrip Blue
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+
+      paymentObject.on('payment.failed', function (response) {
+        alert("Payment Failed: " + response.error.description);
+      });
+
+    } catch (error) {
+      console.error("Payment Error:", error);
+      alert("Could not initialize payment. Please try again.");
+    } finally {
+      setLoadingId(null);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Head>
-        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <title>Packages | SpotOnTrip</title>
       </Head>
 
-      {/* Header & Hero Section (Keep your existing JSX here) */}
+      
+      <Script id="razorpay-checkout-js" src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload"/>
 
-      {/* Search Bar */}
-      <section className="max-w-4xl mx-auto -mt-20 relative z-20 px-4">
-        <form onSubmit={handleSearch} className="flex bg-white p-2 rounded-xl shadow-2xl border-t-4 border-cyan-600">
-          <input
-            type="text"
-            className="flex-grow p-4 outline-none text-lg"
-            placeholder="Search flights or destinations..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          <button type="submit" className="bg-cyan-600 text-white px-8 py-4 rounded-lg font-bold">
-            {loading ? 'Searching...' : 'Search'}
-          </button>
-        </form>
-      </section>
+      <Header/>
 
-      {/* Grid Section */}
-      <section className="max-w-7xl mx-auto py-20 px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {results.length > 0 ? (
-            results.map((item) => (
-              <PackageCard 
-                key={item.id}
-                name={item.name}
-                duration={item.info}
-                price={item.price}
-                keyword={item.keyword}
-                onBook={makePayment}
-              />
-            ))
-          ) : (
-            <p className="text-center col-span-3 text-gray-400">Search to see real-time Indian travel options.</p>
-          )}
+      <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+        <h1 className="text-4xl font-bold text-center text-gray-900 mb-12">Exclusive Travel Packages</h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {packages.map((pkg) => (
+            <div key={pkg.id} className="bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:scale-105 border border-gray-100">
+              <img src={pkg.image} alt={pkg.title} className="h-48 w-full object-cover" />
+              <div className="p-6">
+                <h3 className="text-xl font-bold text-gray-800">{pkg.title}</h3>
+                <p className="text-gray-600 mt-2 text-sm">{pkg.description}</p>
+                <div className="mt-6 flex items-center justify-between">
+                  <span className="text-2xl font-bold text-blue-600">₹{pkg.price}</span>
+                  <button
+                    onClick={() => makePayment(pkg)}
+                    disabled={loadingId === pkg.id}
+                    className={`px-6 py-2 rounded-lg font-semibold text-white transition-colors ${
+                      loadingId === pkg.id ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {loadingId === pkg.id ? 'Loading...' : 'Book Now'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      </section>
+      </main>
+
+      <Footer/>
     </div>
   );
 }
