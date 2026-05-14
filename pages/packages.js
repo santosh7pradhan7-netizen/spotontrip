@@ -1,15 +1,3 @@
-git add .
-    git commit -m "Complete packages UI with Razorpay integration"
-    git push origin master
-    ```
-3.  **Redeploy** on Vercel once (just to be safe).
-
-**Now, when you visit [www.spotontrip.com/packages](http://www.spotontrip.com/packages) and click the button, you should finally see the secure Razorpay payment shieldTo make the "Book Now" button fully functional, responsive, and connected to your new API path, here is the complete code for `pages/packages.js`.
-
-I have optimized this for **SpotOnTrip** by adding the `Script` loader correctly and ensuring the frontend handles the Razorpay popup perfectly.
-
-### The Complete `pages/packages.js`
-```javascript
 import { useState } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
@@ -20,7 +8,7 @@ const packages = [
   {
     id: 1,
     title: "Summer Trip: Rajpura to River",
-    description: "A 10-minute scenic journey with friends to the best swimming spots.",
+    description: "A scenic journey with friends to the best swimming spots near Rajpura.",
     price: 4999,
     image: "https://images.unsplash.com/photo-1544365558-35aa4afcf11f?auto=format&fit=crop&q=80&w=800",
   },
@@ -44,6 +32,12 @@ export default function PackagesPage() {
   const [loadingId, setLoadingId] = useState(null);
 
   const makePayment = async (packageItem) => {
+    // Check if Razorpay script is actually loaded
+    if (!window.Razorpay) {
+      alert("Razorpay SDK failed to load. Are you online?");
+      return;
+    }
+
     setLoadingId(packageItem.id);
 
     try {
@@ -59,18 +53,19 @@ export default function PackagesPage() {
 
       const orderData = await res.json();
 
-      if (!res.ok) throw new Error(orderData.message || "Failed to create order");
+      if (!res.ok) {
+        throw new Error(orderData.message || "Failed to create order");
+      }
 
       // 2. Initialize Razorpay Options
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, // Public Key from Vercel
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
         amount: orderData.amount,
         currency: orderData.currency,
         name: "SpotOnTrip",
         description: `Booking for ${packageItem.title}`,
         order_id: orderData.id,
         handler: function (response) {
-          // Success Callback
           alert(`Payment Successful! ID: ${response.razorpay_payment_id}`);
           window.location.href = "/order-success";
         },
@@ -79,7 +74,7 @@ export default function PackagesPage() {
           email: "traveler@example.com",
           contact: "9999999999",
         },
-        theme: { color: "#2563eb" }, // SpotOnTrip Blue
+        theme: { color: "#2563eb" }, 
       };
 
       const paymentObject = new window.Razorpay(options);
@@ -91,7 +86,7 @@ export default function PackagesPage() {
 
     } catch (error) {
       console.error("Payment Error:", error);
-      alert("Could not initialize payment. Please try again.");
+      alert("Could not initialize payment. Please check your internet or Vercel Environment Variables.");
     } finally {
       setLoadingId(null);
     }
@@ -103,10 +98,14 @@ export default function PackagesPage() {
         <title>Packages | SpotOnTrip</title>
       </Head>
 
-      
-      <Script id="razorpay-checkout-js" src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload"/>
+      {/* Using 'beforeInteractive' ensures the button is clickable as soon as the page loads */}
+      <Script 
+        id="razorpay-checkout-js" 
+        src="https://checkout.razorpay.com/v1/checkout.js" 
+        strategy="beforeInteractive"
+      />
 
-      <Header/>
+      <Header />
 
       <main className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <h1 className="text-4xl font-bold text-center text-gray-900 mb-12">Exclusive Travel Packages</h1>
@@ -136,7 +135,7 @@ export default function PackagesPage() {
         </div>
       </main>
 
-      <Footer/>
+      <Footer />
     </div>
   );
 }
