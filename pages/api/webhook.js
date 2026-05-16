@@ -2,14 +2,12 @@
 import crypto from 'crypto';
 import { supabase } from '../../lib/supabaseClient';
 
-// Disable standard body parsers so we can process raw webhook signatures securely
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-// Helper stream converter to read the raw request signature arriving from Razorpay
 async function getRawBody(readable) {
   const chunks = [];
   for await (const chunk of readable) {
@@ -25,9 +23,8 @@ export default async function handler(req, res) {
 
   try {
     const rawBody = await getRawBody(req);
-    const secret = process.env.RAZORPAY_KEY_SECRET || 'STFV7KNHiEgjl0vo1cZ7tpQ2'; // Active secret key reference
+    const secret = process.env.RAZORPAY_KEY_SECRET || 'STFV7KNHiEgjl0vo1cZ7tpQ2';
     
-    // Validate that this request genuine, un-tampered, and came straight from Razorpay
     const expectedSignature = crypto
       .createHmac('sha256', secret)
       .update(rawBody)
@@ -43,24 +40,23 @@ export default async function handler(req, res) {
     const payload = JSON.parse(rawBody);
     const event = payload.event;
 
-    // Listen strictly for successfully captured transaction events
     if (event === 'payment.captured') {
       const paymentEntity = payload.payload.payment.entity;
       
       const orderId = paymentEntity.order_id;
       const paymentId = paymentEntity.id;
-      const amountPaid = paymentEntity.amount / 100; // Convert paise values back into rupees
-      const customerName = paymentEntity.notes?.customer_name || 'Traveler';
+      const amountPaid = paymentEntity.amount / 100;
+      const customerName = paymentEntity.notes?.customer_name || 'Valued Traveler';
       const customerEmail = paymentEntity.email;
       const customerPhone = paymentEntity.contact;
       const packageTitle = paymentEntity.notes?.package_title || 'Tour Package';
       const travelDate = paymentEntity.notes?.travel_date || new Date().toISOString().split('T')[0];
       const guests = paymentEntity.notes?.total_guests || 1;
 
-      console.log(`💳 Received successful payment for Order: ${orderId}. Storing row...`);
+      console.log(`💳 Processing transaction details for Order: ${orderId}...`);
 
-      // Write booking details straight to your live database records
-      const { error } = await supabase
+      // 1. Log transaction into your live Supabase table
+      const { error: dbError } = await supabase
         .from('bookings')
         .insert([{
           order_id: orderId,
@@ -75,19 +71,73 @@ export default async function handler(req, res) {
           booking_status: 'success'
         }]);
 
-      if (error) {
-        console.error('Database write compilation error:', error.message);
-        throw error;
+      if (dbError) {
+        console.error('Database logging error:', dbError.message);
+        throw dbError;
       }
 
-      console.log('🎉 Automated booking ledger insertion completed successfully.');
+      // 2. Dispatch a beautiful confirmation email ticket instantly via Resend
+      try {
+        const emailResponse = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Your active live Resend API token key
+            'Authorization': 'Bearer re_ehD8rXLQ_GMcdXiij4WBDJazy79emykBd' 
+          },
+          body: JSON.stringify({
+            from: 'SpotOnTrip <onboarding@resend.dev>', // Free tier default sandbox sender email
+            to: [customerEmail],
+            subject: `✈️ Booking Confirmed: Your Itinerary for ${packageTitle}`,
+            html: `
+              <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
+                <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #0f766e;">
+                  <h1 style="color: #0f766e; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 0.5px;">SpotOnTrip</h1>
+                  <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Your Adventure Coordinates Await</p>
+                </div>
+                
+                <div style="padding: 30px 10px;">
+                  <h2 style="color: #0f172a; margin-top: 0;">Pack Your Bags, ${customerName}! 🎉</h2>
+                  <p style="font-size: 16px; line-height: 1.6; color: #334155;">Your transaction completed successfully, and your travel dates have been securely locked in with our Rajpura live departure routing network. Below are your booking confirmation records.</p>
+                  
+                  <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin: 25px 0; border: 1px solid #f1f5f9;">
+                    <h3 style="margin-top: 0; color: #0f766e; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">Booking Details</h3>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Selected Package:</strong> ${packageTitle}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Date of Departure:</strong> ${travelDate}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Total Guests Reserved:</strong> ${guests} ${guests === 1 ? 'Traveler' : 'Travelers'}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Total Amount Paid:</strong> <span style="color: #16a34a; font-weight: 700;">₹${amountPaid}</span></p>
+                  </div>
+
+                  <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; border: 1px solid #f1f5f9; font-family: monospace; font-size: 13px; color: #64748b;">
+                    <span style="display: block; margin-bottom: 4px;"><strong>Order ID:</strong> ${orderId}</span>
+                    <span style="display: block;"><strong>Payment Gateway ID:</strong> ${paymentId}</span>
+                  </div>
+                </div>
+
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; font-size: 13px; color: #94a3b8;">
+                  <p style="margin: 0 0 5px 0;">If you have any questions regarding itinerary timings, contact operations at support@spotontrip.com</p>
+                  <p style="margin: 0;">&copy; 2026 SpotOnTrip. All rights reserved.</p>
+                </div>
+              </div>
+            `
+          })
+        });
+
+        if (!emailResponse.ok) {
+          const emailErrData = await emailResponse.text();
+          console.error('Resend delivery processing roadblock:', emailErrData);
+        } else {
+          console.log(`✉️ Confirmation ticket successfully dispatched to ${customerEmail}`);
+        }
+      } catch (mailErr) {
+        console.error('Email pipeline execution fault:', mailErr.message);
+      }
     }
 
-    // Always reply with a clean 200 OK to stop Razorpay from retrying the event
     return res.status(200).json({ status: 'ok' });
 
   } catch (err) {
-    console.error('Webhook processing execution fault:', err.message);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    console.error('Webhook fault:', err.message);
+    return res.status(500).json({ message: 'Internal Server Sync Failure' });
   }
 }
