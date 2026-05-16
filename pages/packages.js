@@ -1,10 +1,10 @@
 // pages/packages.js
 import React, { useState } from 'react';
 import Head from 'next/head';
-import { supabase } from '../lib/supabaseClient'; // Bridges your active Supabase client settings
+import { supabase } from '../lib/supabaseClient'; // Essential database bridge connection
 
-// The data array is cleanly injected into the component props pool at runtime
 export default function Packages({ initialPackages }) {
+  // Read packages dynamically from our database array injection pool
   const [packagesList] = useState(initialPackages || []);
   const [loading, setLoading] = useState(false);
   
@@ -50,7 +50,6 @@ export default function Packages({ initialPackages }) {
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     
-    // Basic validation safety check
     if (!formData.fullName || !formData.email || !formData.phone || !formData.travelDate) {
       alert('Please fill out all fields before proceeding to payment.');
       return;
@@ -60,12 +59,12 @@ export default function Packages({ initialPackages }) {
     const finalCalculatedAmount = calculateTotal();
 
     try {
-      // Step 1: Request fresh payment payload from our working backend API
+      // Step 1: Request fresh payment payload from our backend API
       const response = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          amount: finalCalculatedAmount, // Sends total adjusted price dynamically
+          amount: finalCalculatedAmount, 
           currency: 'INR' 
         }),
       });
@@ -73,9 +72,9 @@ export default function Packages({ initialPackages }) {
       if (!response.ok) throw new Error('Failed backend payment handshake.');
       const orderData = await response.json();
 
-      // Step 2: Configure Razorpay client setup with dynamic user parameters
+      // Step 2: Configure Razorpay client setup with key directly in code
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_Spw4XJWqrxC66R', 
+        key: 'rzp_test_Spw4XJWqrxC66R', // Directly pasted for a reliable build bypass!
         amount: orderData.amount,
         currency: orderData.currency,
         name: 'SpotOnTrip',
@@ -251,7 +250,7 @@ export default function Packages({ initialPackages }) {
   );
 }
 
-// Next.js Server Side props layer pulls directly from Supabase upon every single request
+// Fetch database records live from Supabase on every page view request
 export async function getServerSideProps() {
   try {
     const { data: packages, error } = await supabase
@@ -266,7 +265,7 @@ export async function getServerSideProps() {
       },
     };
   } catch (e) {
-    console.error('Database connection handling error:', e);
+    console.error('Database connection routing handling error:', e);
     return {
       props: {
         initialPackages: [],
