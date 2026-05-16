@@ -33,8 +33,8 @@ export default function PackagesPage() {
 
   const makePayment = async (packageItem) => {
     // Check if Razorpay script is actually loaded
-    if (!window.Razorpay) {
-      alert("Razorpay SDK failed to load. Are you online?");
+    if (!window || !window.Razorpay) {
+      alert("Razorpay SDK failed to load or is initializing. Please wait a second and try again.");
       return;
     }
 
@@ -51,10 +51,17 @@ export default function PackagesPage() {
         }),
       });
 
+      // FIX 1: Inspect response health BEFORE trying to parse JSON to prevent HTML parsing crashes
+      if (!res.ok) {
+        const textError = await res.text();
+        console.error("Server HTML Error Snippet:", textError.slice(0, 300));
+        throw new Error(`Server returned status code ${res.status}. Check Vercel logs.`);
+      }
+
       const orderData = await res.json();
 
-      if (!res.ok) {
-        throw new Error(orderData.message || "Failed to create order");
+      if (!orderData || !orderData.id) {
+        throw new Error("Invalid order data returned from server backend.");
       }
 
       // 2. Initialize Razorpay Options
@@ -77,16 +84,19 @@ export default function PackagesPage() {
         theme: { color: "#2563eb" }, 
       };
 
-      const paymentObject = new window.Razorpay(options);
-      paymentObject.open();
-
+      // FIX 2: Safeguard initialization sequence directly on window element
+      const RazorpayInstance = window.Razorpay;
+      const paymentObject = new RazorpayInstance(options);
+      
       paymentObject.on('payment.failed', function (response) {
         alert("Payment Failed: " + response.error.description);
       });
 
+      paymentObject.open();
+
     } catch (error) {
-      console.error("Payment Error:", error);
-      alert("Could not initialize payment. Please check your internet or Vercel Environment Variables.");
+      console.error("Payment Step Exception:", error);
+      alert(`Could not initialize payment: ${error.message}`);
     } finally {
       setLoadingId(null);
     }
@@ -98,7 +108,7 @@ export default function PackagesPage() {
         <title>Packages | SpotOnTrip</title>
       </Head>
 
-      {/* Using 'beforeInteractive' ensures the button is clickable as soon as the page loads */}
+      {/* Kept beforeInteractive for maximum responsiveness */}
       <Script 
         id="razorpay-checkout-js" 
         src="https://checkout.razorpay.com/v1/checkout.js" 
