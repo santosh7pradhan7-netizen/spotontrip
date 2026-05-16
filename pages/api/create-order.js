@@ -1,45 +1,52 @@
-// /pages/api/create-order.js
-
+// pages/api/create-order.js
 import Razorpay from 'razorpay';
-
-// Initializes the Razorpay instance using your keys from .env.local
-const razorpay = new Razorpay({
-  // Uses the Public Key ID and the Secret Key for API authentication
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).end(`Method ${req.method} Not Allowed`);
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  // 1. Log checking to see if Vercel is actually passing strings or undefined values
+  console.log("Checking Backend Environment Keys...");
+  console.log("RAZORPAY_KEY_ID exists:", !!process.env.RAZORPAY_KEY_ID);
+  console.log("RAZORPAY_KEY_SECRET exists:", !!process.env.RAZORPAY_KEY_SECRET);
+
+  // 2. Fail early if keys are missing inside the serverless function environment
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    return res.status(500).json({ 
+      message: 'Server Environment Error: Keys are missing or incorrectly named in Vercel settings.' 
+    });
   }
 
   try {
-    // We hardcode the amount here, but in a real app, it would come from req.body
-    const amountInPaise = 500 * 100; // ₹500.00 is 50000 paise
+    // 3. Initialize Razorpay inside the handler using the clean environment strings
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID.trim(),
+      key_secret: process.env.RAZORPAY_KEY_SECRET.trim(),
+    });
+
+    const { amount, currency } = req.body;
+
+    if (!amount) {
+      return res.status(400).json({ message: 'Amount parameter is missing from frontend request' });
+    }
 
     const options = {
-      amount: amountInPaise,
-      currency: 'INR',
-      receipt: `receipt_${Date.now()}`,
-      payment_capture: 1, 
+      amount: Math.round(parseFloat(amount) * 100), // Secure conversion handling decimals cleanly
+      currency: currency || 'INR',
+      receipt: `receipt_order_${Date.now()}`,
     };
 
     const order = await razorpay.orders.create(options);
-    
-    // Send the essential Order ID back to the frontend
-    res.status(200).json({
-      // 🚨 CORRECTION: We must use 'id' to match the frontend check!
-      id: order.id, 
-      currency: order.currency,
-      amount: order.amount,
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
-    });
+
+    // Order created successfully!
+    return res.status(200).json(order);
 
   } catch (error) {
-    console.error('Razorpay Order Creation Error:', error);
-    // Send the error details back to the frontend for debugging
-    res.status(500).json({ error: 'Failed to create Razorpay order', details: error.message });
+    console.error("Razorpay SDK Internal Response Error:", error);
+    return res.status(500).json({ 
+      message: 'Razorpay rejected the API keys provided.', 
+      error: error.message 
+    });
   }
 }
