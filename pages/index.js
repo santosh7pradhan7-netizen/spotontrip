@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
 
 export default function Home({ initialPackages }) {
-  const [activeTab, setActiveTab] = useState('packages'); // Default selection
+  const [activeTab, setActiveTab] = useState('packages'); // Default category selection
   const [packagesList] = useState(initialPackages || []);
 
   // Quick categories configuration object for the dynamic UI Console
@@ -95,9 +95,21 @@ export default function Home({ initialPackages }) {
             ))}
           </div>
 
-          {/* DYNAMIC CONSOLE INPUT INTERFACE PANELS */}
+          {/* DYNAMIC CONSOLE INPUT INTERFACE PANELS WITH LIVE QUERY DIRECTION */}
           <div style={{ padding: '24px' }}>
-            <form onSubmit={(e) => { e.preventDefault(); alert(`${activeTab.toUpperCase()} inventory interface lookup loop initialized...`); }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', alignItems: 'end' }}>
+            <form 
+              onSubmit={(e) => { 
+                e.preventDefault(); 
+                // Dynamically query input fields sequentially from the DOM element pool
+                const fromVal = e.target.elements[0]?.value || '';
+                const toVal = e.target.elements[1]?.value || '';
+                const dateOrTierVal = e.target.elements[2]?.value || '';
+                
+                // Redirect user payload smoothly to our live structural search template file
+                window.location.href = `/search?category=${activeTab}&from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}&date=${encodeURIComponent(dateOrTierVal)}&tier=${encodeURIComponent(dateOrTierVal)}`;
+              }} 
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', alignItems: 'end' }}
+            >
               
               {activeTab === 'packages' && (
                 <>
@@ -129,8 +141,8 @@ export default function Home({ initialPackages }) {
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Class Selection</label>
                     <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
-                      <option>Economy Comfort</option>
-                      <option>Business Premium</option>
+                      <option value="Economy">Economy Comfort</option>
+                      <option value="Business">Business Premium</option>
                     </select>
                   </div>
                 </>
@@ -149,8 +161,8 @@ export default function Home({ initialPackages }) {
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Coach Class</label>
                     <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
-                      <option>AC Sleeper Multi-Axle Volvo</option>
-                      <option>Luxury Seater Scania</option>
+                      <option value="AC Sleeper">AC Sleeper Multi-Axle Volvo</option>
+                      <option value="Luxury Seater">Luxury Seater Scania</option>
                     </select>
                   </div>
                 </>
@@ -169,9 +181,9 @@ export default function Home({ initialPackages }) {
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Travel Class Tier</label>
                     <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
-                      <option>AC First Class (1A)</option>
-                      <option>AC 2 Tier (2A)</option>
-                      <option>Vande Bharat Chair Car (CC)</option>
+                      <option value="1A">AC First Class (1A)</option>
+                      <option value="2A">AC 2 Tier (2A)</option>
+                      <option value="CC">Vande Bharat Chair Car (CC)</option>
                     </select>
                   </div>
                 </>
@@ -190,8 +202,8 @@ export default function Home({ initialPackages }) {
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Room Occupancy</label>
                     <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
-                      <option>1 Deluxe Suite Room, 2 Adults</option>
-                      <option>2 Family Interconnected, 4 Adults</option>
+                      <option value="Deluxe Room">1 Deluxe Suite Room, 2 Adults</option>
+                      <option value="Family Suite">2 Family Interconnected, 4 Adults</option>
                     </select>
                   </div>
                 </>
@@ -206,9 +218,9 @@ export default function Home({ initialPackages }) {
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Event Category</label>
                     <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
-                      <option>Music Festivals & Concerts</option>
-                      <option>Amusement & Theme Park Passes</option>
-                      <option>Food & Camping Retreats</option>
+                      <option value="Music Festivals">Music Festivals & Concerts</option>
+                      <option value="Amusement Parks">Amusement & Theme Park Passes</option>
+                      <option value="Food Retreats">Food & Camping Retreats</option>
                     </select>
                   </div>
                   <div>
