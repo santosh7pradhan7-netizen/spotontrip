@@ -7,10 +7,10 @@ export default async function handler(req, res) {
   }
 
   try {
-    // TEMPORARY DIAGNOSTIC TEST: Hardcoding keys directly to bypass Vercel Env Sync
+    // Hardcoded keys with perfect syntax alignment
     const razorpay = new Razorpay({
-      key_id:'rzp_test_Spw4XJWqrxC66R'      // e.g., 'rzp_test_xxxxxxxxx'
-      key_secret:'Inzt0IAKyI8ZolLaaKR0XOC3'// e.g., 'xxxxxxxxxxxxxxxxxxxx'
+      key_id: 'rzp_test_Spw4XJWqrxC66R',
+      key_secret: 'Inzt0IAKyI8ZolLaaKR0XOC3'
     });
 
     const { amount, currency } = req.body;
