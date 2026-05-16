@@ -1,173 +1,311 @@
 // pages/index.js
-import React from 'react';
+import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { supabase } from '../lib/supabaseClient';
 
-export default function Home() {
-  const travelFeatures = [
-    { title: 'Summer River Holidays', icon: '🏊‍♂️', desc: 'Expertly curated swimming and riverside camping trips starting directly from Rajpura.' },
-    { title: 'Flawless Transactions', icon: '💳', desc: 'Secure, instant booking payments backed by verified enterprise-grade security protocols.' },
-    { title: '24/7 Route Assistance', icon: '🗺️', desc: 'Round-the-clock coordinator support to smoothly manage custom itinerary configurations.' }
-  ];
+export default function Home({ initialPackages }) {
+  const [activeTab, setActiveTab] = useState('packages'); // Default selection
+  const [packagesList] = useState(initialPackages || []);
 
-  const featuredReviews = [
-    {
-      name: 'Rohan Sharma',
-      location: 'Rajpura',
-      rating: '★★★★★',
-      comment: 'Gathered a group of 8 friends for the River Swimming Holiday. The private AC transport picked us up right from Rajpura hub. Completely stress-free arrangement, and the river campsite was pristine.'
-    },
-    {
-      name: 'Priya Patel',
-      location: 'Chandigarh',
-      rating: '★★★★★',
-      comment: 'The Premium Mountain Adventure completely exceeded expectations. The 4-star resort stay was highly luxurious, and the trekking guides knew the safest routes.'
-    },
-    {
-      name: 'Amit Verma',
-      location: 'Rajpura',
-      rating: '★★★★★',
-      comment: 'Booked a weekend family getaway layout. The coordination team handled the itinerary modifications perfectly when I requested an extra room allocation.'
-    }
+  // Quick categories configuration object for the dynamic UI Console
+  const tabs = [
+    { id: 'packages', label: '🏖️ Tour Packages' },
+    { id: 'flights', label: '✈️ Flights' },
+    { id: 'buses', label: '🚌 Bus Booking' },
+    { id: 'trains', label: '🚊 Train Tickets' },
+    { id: 'hotels', label: '🏨 Luxury Hotels' },
+    { id: 'events', label: '🎟️ Local Events' }
   ];
 
   return (
-    <div style={{ backgroundColor: '#ffffff', minHeight: '100vh', fontFamily: 'sans-serif', color: '#1e293b' }}>
+    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
       <Head>
-        <title>SpotOnTrip | Premium Vacation & Adventure Planners</title>
-        <meta name="description" content="Book pristine summer holiday packages and river swimming trips seamlessly from Rajpura." />
+        <title>SpotOnTrip | Premium Local & Global Booking Logistics Hub</title>
+        <meta name="description" content="Premium curated travel adventures, flights, buses, trains, hotels, and event ticket booking logistics departing from Rajpura." />
         <style>{`
-          .nav-link { transition: color 0.2s ease; text-decoration: none; font-weight: 600; color: #475569; }
-          .nav-link:hover { color: #0f766e; }
-          .btn-hover { transition: all 0.2s ease; }
-          .btn-hover:hover { background-color: #0d9488 !important; transform: translateY(-2px); }
-          .btn-hover:active { transform: translateY(0); }
-          .hover-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
-          .hover-card:hover { transform: translateY(-6px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+          .tab-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+          .tab-btn:hover { background-color: rgba(15, 118, 110, 0.08); color: #0f766e; }
+          .category-card { transition: transform 0.3s ease, box-shadow 0.3s ease; }
+          .category-card:hover { transform: translateY(-5px); box-shadow: 0 12px 20px -5px rgba(0,0,0,0.08) !important; }
+          .search-input { outline: none; border: 1px solid #cbd5e1; transition: border-color 0.2s; }
+          .search-input:focus { border-color: #0f766e !important; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1); }
         `}</style>
       </Head>
 
-      {/* Modern Fixed Header Navigation Bar */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(8px)', borderBottom: '1px solid #e2e8f0', padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ textDecoration: 'none', color: '#0f766e', fontWeight: '800', fontSize: '1.5rem', letterSpacing: '-0.5px' }}>
-          SpotOnTrip
-        </Link>
+      {/* --- SECTION 1: LUXURY HERO SECTION WITH MULTI-MODAL BOOKING CONSOLE --- */}
+      <div style={{ 
+        position: 'relative', 
+        minHeight: '85vh', 
+        backgroundImage: 'linear-gradient(rgba(15, 23, 42, 0.5), rgba(15, 23, 42, 0.7)), url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80")', 
+        backgroundSize: 'cover', 
+        backgroundPosition: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: '60px 20px'
+      }}>
         
-        <nav style={{ display: 'flex', gap: '32px', fontSize: '0.95rem' }}>
-          <Link href="/" style={{ color: '#0f766e', fontWeight: '700' }} className="nav-link">Home</Link>
-          <Link href="/packages" className="nav-link">Explore Packages</Link>
-          <Link href="/booking" className="nav-link">My Bookings</Link>
-          <Link href="/reviews" className="nav-link">Reviews</Link>
-        </nav>
-
-        <div>
-          <Link href="/packages" className="btn-hover" style={{ textDecoration: 'none', backgroundColor: '#0f766e', color: '#ffffff', padding: '10px 20px', borderRadius: '8px', fontSize: '0.9rem', fontWeight: '700' }}>
-            Book Now
-          </Link>
-        </div>
-      </header>
-
-      {/* Hero Showcase Area */}
-      <section style={{ position: 'relative', overflow: 'hidden', padding: '120px 20px', backgroundColor: '#f8fafc', backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 0)', backgroundSize: '24px 24px' }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', textAlign: 'center' }}>
-          <span style={{ backgroundColor: '#ccfbf1', color: '#0f766e', padding: '6px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Welcome To SpotOnTrip
-          </span>
-          <h1 style={{ fontSize: '3.75rem', fontWeight: '800', color: '#0f172a', marginTop: '20px', marginBottom: '24px', lineHeight: '1.1', letterSpacing: '-1px' }}>
-            Your Next Adventure, <br />
-            <span style={{ color: '#0f766e' }}>Perfected In One Click.</span>
-          </h1>
-          <p style={{ fontSize: '1.25rem', color: '#475569', maxWidth: '640px', margin: '0 auto 40px auto', lineHeight: '1.6' }}>
-            Explore immersive weekend getaways, summer river excursions, and premium holiday packages. Beautiful interfaces powered by bulletproof payment gateways.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '16px' }}>
-            <Link href="/packages" className="btn-hover" style={{ textDecoration: 'none', backgroundColor: '#0f766e', color: '#ffffff', padding: '16px 32px', borderRadius: '10px', fontSize: '1.05rem', fontWeight: '700', boxShadow: '0 4px 14px rgba(15, 118, 110, 0.3)' }}>
-              View Holiday Packages
-            </Link>
-            <Link href="/booking" style={{ textDecoration: 'none', border: '1px solid #cbd5e1', color: '#334155', padding: '16px 32px', borderRadius: '10px', fontSize: '1.05rem', fontWeight: '600', backgroundColor: '#ffffff' }}>
-              Track Existing Booking
-            </Link>
+        {/* Absolute Floating Brand Nav */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto' }}>
+          <h1 style={{ color: '#ffffff', margin: 0, fontSize: '1.6rem', fontWeight: '900', letterSpacing: '0.5px' }}>SpotOnTrip</h1>
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <Link href="/packages" style={{ color: '#ffffff', textDecoration: 'none', fontWeight: '600', fontSize: '0.95rem' }}>Explore Trips</Link>
+            <Link href="/admin" style={{ color: 'rgba(255,255,255,0.8)', textDecoration: 'none', fontWeight: '600', fontSize: '0.95rem' }}>🔐 Terminal Admin</Link>
           </div>
         </div>
-      </section>
 
-      {/* Core Operational Features Section */}
-      <section style={{ padding: '90px 20px', maxWidth: '1140px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-          <h2 style={{ fontSize: '2.25rem', fontWeight: '800', color: '#0f172a' }}>Why Travelers Choose Us</h2>
-          <p style={{ color: '#64748b', marginTop: '10px', fontSize: '1.05rem' }}>Premium service standards from departure to checkout arrival.</p>
+        {/* Hero Copy */}
+        <div style={{ textAlign: 'center', color: '#ffffff', marginBottom: '40px', maxWidth: '800px', marginTop: '40px' }}>
+          <span style={{ backgroundColor: 'rgba(20, 184, 166, 0.2)', color: '#2dd4bf', padding: '6px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Summer Vacation Season 2026
+          </span>
+          <h2 style={{ fontSize: '3.5rem', fontWeight: '800', marginTop: '16px', marginBottom: '16px', lineHeight: '1.1' }}>Your Gateway to Flawless Logistics</h2>
+          <p style={{ color: '#e2e8f0', fontSize: '1.25rem', fontWeight: '400', lineHeight: '1.6' }}>
+            Seamlessly reserve customized tour routes, premium regional flights, point-to-point buses, luxury rail transit, stays, and festival events.
+          </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '40px' }}>
-          {travelFeatures.map((feat, index) => (
-            <div key={index} className="hover-card" style={{ padding: '32px', borderRadius: '16px', border: '1px solid #f1f5f9', backgroundColor: '#ffffff', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-              <div style={{ fontSize: '2.5rem', marginBottom: '20px' }}>{feat.icon}</div>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: '700', color: '#0f172a', marginBottom: '12px' }}>{feat.title}</h3>
-              <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.6', margin: 0 }}>{feat.desc}</p>
+        {/* --- THE MASTER LOGISTICS PANEL CONSOLE --- */}
+        <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '950px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4)', overflow: 'hidden' }}>
+          
+          {/* Categorized Tab Bar Switching Strip */}
+          <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="tab-btn"
+                style={{
+                  flex: '1',
+                  whiteSpace: 'nowrap',
+                  padding: '16px 20px',
+                  border: 'none',
+                  background: activeTab === tab.id ? '#ffffff' : 'transparent',
+                  color: activeTab === tab.id ? '#0f766e' : '#64748b',
+                  fontSize: '0.9rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === tab.id ? '3px solid #0f766e' : '3px solid transparent'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* DYNAMIC CONSOLE INPUT INTERFACE PANELS */}
+          <div style={{ padding: '24px' }}>
+            <form onSubmit={(e) => { e.preventDefault(); alert(`${activeTab.toUpperCase()} inventory interface lookup loop initialized...`); }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', alignItems: 'end' }}>
+              
+              {activeTab === 'packages' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Departure Station</label>
+                    <input type="text" className="search-input" defaultValue="Rajpura Junction (RPJ)" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Target Destination</label>
+                    <input type="text" className="search-input" placeholder="e.g. Rishikesh River Resort" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Travel Timeline</label>
+                    <input type="date" className="search-input" style={{ width: '100%', padding: '11px', borderRadius: '8px', fontSize: '0.95rem', color: '#334155' }} />
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'flights' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>From (Airport)</label>
+                    <input type="text" className="search-input" placeholder="Origin Code (e.g. IXC)" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>To (Airport)</label>
+                    <input type="text" className="search-input" placeholder="Destination (e.g. DEL)" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Class Selection</label>
+                    <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
+                      <option>Economy Comfort</option>
+                      <option>Business Premium</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'buses' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Pickup Location</label>
+                    <input type="text" className="search-input" defaultValue="Rajpura Bypass" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Drop Destination</label>
+                    <input type="text" className="search-input" placeholder="City Terminal Hub" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Coach Class</label>
+                    <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
+                      <option>AC Sleeper Multi-Axle Volvo</option>
+                      <option>Luxury Seater Scania</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'trains' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>From (Station)</label>
+                    <input type="text" className="search-input" defaultValue="Rajpura Jn - RPJ" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>To (Station)</label>
+                    <input type="text" className="search-input" placeholder="Station Name / Code" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Travel Class Tier</label>
+                    <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
+                      <option>AC First Class (1A)</option>
+                      <option>AC 2 Tier (2A)</option>
+                      <option>Vande Bharat Chair Car (CC)</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'hotels' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>City / Resort Zone</label>
+                    <input type="text" className="search-input" placeholder="Where are you staying?" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Check In - Check Out</label>
+                    <input type="text" className="search-input" placeholder="Select dates" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Room Occupancy</label>
+                    <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
+                      <option>1 Deluxe Suite Room, 2 Adults</option>
+                      <option>2 Family Interconnected, 4 Adults</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {activeTab === 'events' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>City Location</label>
+                    <input type="text" className="search-input" defaultValue="Chandigarh Tricity" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Event Category</label>
+                    <select className="search-input" style={{ width: '100%', padding: '12px', borderRadius: '8px', fontSize: '0.95rem', backgroundColor: '#fff' }}>
+                      <option>Music Festivals & Concerts</option>
+                      <option>Amusement & Theme Park Passes</option>
+                      <option>Food & Camping Retreats</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: '#64748b', marginBottom: '6px', textTransform: 'uppercase' }}>Ticket Count</label>
+                    <input type="number" className="search-input" defaultValue="1" min="1" style={{ width: '100%', padding: '11px', borderRadius: '8px', fontSize: '0.95rem' }} />
+                  </div>
+                </>
+              )}
+
+              <button type="submit" style={{ backgroundColor: '#0f766e', color: '#ffffff', border: 'none', padding: '14px', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(15, 118, 110, 0.3)' }}>
+                🔍 Search Open Inventory
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+      {/* --- SECTION 2: LIVE DYNAMIC TOUR COMBINATIONS SHOWCASE GRID --- */}
+      <div style={{ maxWidth: '1200px', margin: '80px auto', padding: '0 20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
+          <div>
+            <span style={{ color: '#0f766e', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Top Selected Holiday Escapes</span>
+            <h3 style={{ fontSize: '2rem', fontWeight: '800', margin: '4px 0 0 0', color: '#0f172a' }}>Trending Seasonal Itineraries</h3>
+          </div>
+          <Link href="/packages" style={{ color: '#0f766e', fontWeight: '700', fontSize: '0.95rem', textDecoration: 'none', borderBottom: '2px solid #0f766e', paddingBottom: '2px' }}>
+            View Full Inventory Matrix →
+          </Link>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '30px' }}>
+          {packagesList.slice(0, 3).map((item) => (
+            <div key={item.id} className="category-card" style={{ backgroundColor: '#ffffff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ position: 'relative', height: '220px' }}>
+                <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <span style={{ position: 'absolute', bottom: '15px', right: '15px', backgroundColor: 'rgba(15, 23, 42, 0.75)', color: '#ffffff', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', backdropFilter: 'blur(2px)' }}>🕒 {item.duration}</span>
+              </div>
+              <div style={{ padding: '24px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <span style={{ color: '#0f766e', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase' }}>📍 {item.location}</span>
+                  <h4 style={{ fontSize: '1.3rem', color: '#0f172a', marginTop: '4px', marginBottom: '8px', fontWeight: '700' }}>{item.title}</h4>
+                  <p style={{ color: '#64748b', fontSize: '0.9rem', lineHeight: '1.5', margin: '0 0 20px 0' }}>{item.description}</p>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a' }}>₹{item.price}<small style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '400' }}> / head</small></span>
+                  <Link href="/packages" style={{ backgroundColor: '#0f766e', color: '#ffffff', textDecoration: 'none', padding: '10px 18px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700' }}>Book Instantly</Link>
+                </div>
+              </div>
             </div>
           ))}
         </div>
-      </section>
+      </div>
 
-      {/* NEW INTEGRATED SOCIAL PROOF SECTION */}
-      <section style={{ backgroundColor: '#f8fafc', padding: '90px 20px', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0' }}>
-        <div style={{ maxWidth: '1140px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '50px', flexWrap: 'wrap', gap: '20px' }}>
-            <div>
-              <span style={{ color: '#0f766e', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Social Proof</span>
-              <h2 style={{ fontSize: '2.25rem', fontWeight: '800', color: '#0f172a', marginTop: '6px', margin: 0 }}>What Our Adventurers Say</h2>
-            </div>
-            <Link href="/reviews" style={{ textDecoration: 'none', color: '#0f766e', fontWeight: '700', fontSize: '1rem', borderBottom: '2px solid #0f766e', paddingBottom: '4px' }}>
-              Read All 450+ Reviews &rarr;
-            </Link>
+      {/* --- SECTION 3: CORE PLATFORM LOGISTICS VALUE METRICS --- */}
+      <div style={{ backgroundColor: '#0f172a', color: '#ffffff', padding: '80px 20px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '40px', textAlign: 'center' }}>
+          <div>
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>⚡</div>
+            <h5 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 8px 0', color: '#38bdf8' }}>Instant Verification API</h5>
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', margin: 0 }}>Every single slot booking triggers synchronous layout checks against live supply availability streams.</p>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '30px' }}>
-            {featuredReviews.map((review, index) => (
-              <div key={index} className="hover-card" style={{ backgroundColor: '#ffffff', padding: '32px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ color: '#eab308', fontSize: '1rem', marginBottom: '14px', letterSpacing: '2px' }}>{review.rating}</div>
-                  <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.6', margin: '0 0 24px 0', fontStyle: 'italic' }}>
-                    "{review.comment}"
-                  </p>
-                </div>
-                <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#ccfbf1', color: '#0f766e', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '700' }}>
-                    {review.name.charAt(0)}
-                  </div>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a', fontWeight: '700' }}>{review.name}</h4>
-                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Traveler from {review.location}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div>
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🛡️</div>
+            <h5 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 8px 0', color: '#38bdf8' }}>Escrow Secure Shield</h5>
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', margin: 0 }}>Financial clearance paths execution handled safely using hardcoded Razorpay transaction channels.</p>
+          </div>
+          <div>
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>✉️</div>
+            <h5 style={{ fontSize: '1.15rem', fontWeight: '700', margin: '0 0 8px 0', color: '#38bdf8' }}>Automated Micro-Receipts</h5>
+            <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.6', margin: 0 }}>The moment a transaction captures, webhooks dispatch real-time digital entry invoices straight to email inboxes.</p>
           </div>
         </div>
-      </section>
-
-      {/* Action Engagement Banner */}
-      <section style={{ margin: '80px 20px' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', backgroundColor: '#0f766e', borderRadius: '24px', padding: '60px 40px', textAlign: 'center', color: '#ffffff', boxShadow: '0 20px 25px -5px rgba(15, 118, 110, 0.15)' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: '700', margin: 0 }}>Ready to beat the summer heat?</h2>
-          <p style={{ color: '#ccfbf1', marginTop: '12px', marginBottom: '32px', fontSize: '1.1rem', maxWidth: '500px', margin: '12px auto 32px auto' }}>
-            Gather your friends for an unforgettable river escape trip. Stays, food, and security are fully coordinated.
-          </p>
-          <Link href="/packages" className="btn-hover" style={{ textDecoration: 'none', backgroundColor: '#ffffff', color: '#0f766e', padding: '14px 32px', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', display: 'inline-block', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-            Find Your Destination
-          </Link>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer style={{ backgroundColor: '#0f172a', color: '#94a3b8', padding: '40px 20px', textAlign: 'center', fontSize: '0.9rem', borderTop: '1px solid #1e293b' }}>
-        <p style={{ margin: 0 }}>&copy; 2026 SpotOnTrip. All rights reserved. Routes originating from Rajpura Hub Terminal.</p>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '12px' }}>
-          <Link href="/privacy" style={{ color: '#64748b', textDecoration: 'none' }}>Privacy Policy</Link>
-          <span>&bull;</span>
-          <a href="mailto:support@spotontrip.com" style={{ color: '#64748b', textDecoration: 'none' }}>Help Center</a>
-        </div>
-      </footer>
+      </div>
     </div>
   );
+}
+
+// Read inventory metrics straight from Supabase dynamically for deployment generation
+export async function getServerSideProps() {
+  try {
+    const { data: packages, error } = await supabase
+      .from('packages')
+      .select('*');
+
+    if (error) throw error;
+
+    return {
+      props: {
+        initialPackages: packages || [],
+      },
+    };
+  } catch (e) {
+    console.error('Server side home rendering routing handling error:', e);
+    return {
+      props: {
+        initialPackages: [],
+      },
+    };
+  }
 }
