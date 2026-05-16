@@ -1,8 +1,11 @@
 // pages/packages.js
 import React, { useState } from 'react';
 import Head from 'next/head';
+import { supabase } from '../lib/supabaseClient'; // Bridges your active Supabase client settings
 
-export default function Packages() {
+// The data array is cleanly injected into the component props pool at runtime
+export default function Packages({ initialPackages }) {
+  const [packagesList] = useState(initialPackages || []);
   const [loading, setLoading] = useState(false);
   
   // Modal State Management
@@ -17,34 +20,6 @@ export default function Packages() {
     travelDate: '',
     guests: 1
   });
-
-  // Premium packages array
-  const packagesList = [
-    { 
-      id: 'pkg-1', 
-      title: 'River Escape & Swimming Holiday', 
-      tag: '🔥 Best Seller',
-      price: 4999, 
-      originalPrice: 6499,
-      duration: '2 Days / 1 Night',
-      location: 'Near Rajpura',
-      image: 'https://images.unsplash.com/photo-1544644181-1484b3fdfc62?auto=format&fit=crop&w=600&q=80',
-      description: 'The ultimate summer getaway. Cool off with your friends in crystal clear river waters, enjoy riverside camps, and a full barbecue dinner.',
-      features: ['Private AC Travel from Rajpura', 'Riverside Camping Stay', 'Guided Swimming Session', 'All Meals Included']
-    },
-    { 
-      id: 'pkg-2', 
-      title: 'Premium Mountain Adventure', 
-      tag: '✨ Trending',
-      price: 8999, 
-      originalPrice: 11999,
-      duration: '4 Days / 3 Nights',
-      location: 'Himachal Heights',
-      image: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=600&q=80',
-      description: 'Escape the summer heat entirely. Explore high-altitude viewpoints, guided trekking trails, and enjoy premium luxury resort hospitality.',
-      features: ['Luxury Volvo Transfers', '4-Star Resort Stay', 'Trekking & Paragliding', 'Buffet Breakfast & Dinner']
-    }
-  ];
 
   // Open modal for specific package
   const openBookingModal = (pkg) => {
@@ -100,7 +75,7 @@ export default function Packages() {
 
       // Step 2: Configure Razorpay client setup with dynamic user parameters
       const options = {
-        key: 'rzp_test_Spw4XJWqrxC66R', 
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_Spw4XJWqrxC66R', 
         amount: orderData.amount,
         currency: orderData.currency,
         name: 'SpotOnTrip',
@@ -112,9 +87,9 @@ export default function Packages() {
           alert(`🎉 Booking Confirmed Successfully!\nPayment ID: ${paymentResponse.razorpay_payment_id}\nPackage: ${selectedPackage.title}\nGuests: ${formData.guests}`);
         },
         prefill: { 
-          name: formData.fullName, // Now securely reading their actual input name!
-          email: formData.email,   // Reading real user input email
-          contact: formData.phone  // Reading real user input contact phone
+          name: formData.fullName, 
+          email: formData.email,   
+          contact: formData.phone  
         },
         notes: {
           travel_date: formData.travelDate,
@@ -156,7 +131,7 @@ export default function Packages() {
         </span>
         <h1 style={{ fontSize: '3rem', fontWeight: '800', marginTop: '15px', marginBottom: '15px' }}>Find Your Perfect Holiday</h1>
         <p style={{ color: '#ccfbf1', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-          Curated travel adventures departing from Rajpura. Fill out your details and secure bookings effortlessly.
+          Curated travel adventures departing from Rajpura. Powered by live inventory configurations.
         </p>
       </div>
 
@@ -176,7 +151,7 @@ export default function Packages() {
               <p style={{ color: '#64748b', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '20px' }}>{item.description}</p>
 
               <div style={{ marginBottom: '25px', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
-                {item.features.map((feature, i) => (
+                {item.features && item.features.map((feature, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '8px', fontSize: '0.9rem', color: '#334155' }}>
                     <span style={{ color: '#0d9488', marginRight: '10px', fontWeight: 'bold' }}>✓</span>{feature}
                   </div>
@@ -185,7 +160,7 @@ export default function Packages() {
 
               <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
                 <div>
-                  <span style={{ fontSize: '0.85rem', color: '#94a3b8', textDecoration: 'line-through', display: 'block' }}>₹{item.originalPrice}</span>
+                  {item.original_price && <span style={{ fontSize: '0.85rem', color: '#94a3b8', textDecoration: 'line-through', display: 'block' }}>₹{item.original_price}</span>}
                   <span style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a' }}>₹{item.price} <small style={{ fontSize: '0.8rem', fontWeight: '400', color: '#64748b' }}>/ person</small></span>
                 </div>
                 <button onClick={() => openBookingModal(item)} className="btn-action" style={{ backgroundColor: '#0f766e', color: '#ffffff', border: 'none', padding: '14px 28px', borderRadius: '10px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
@@ -200,7 +175,7 @@ export default function Packages() {
       {/* Modern Interactive Booking Form Modal Overlay Layer */}
       {isModalOpen && selectedPackage && (
         <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden', animation: 'scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', width: '100%', maxWidth: '500px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', overflow: 'hidden' }}>
             
             {/* Modal Header */}
             <div style={{ backgroundColor: '#0f766e', padding: '24px', color: '#ffffff', position: 'relative' }}>
@@ -274,4 +249,28 @@ export default function Packages() {
       )}
     </div>
   );
+}
+
+// Next.js Server Side props layer pulls directly from Supabase upon every single request
+export async function getServerSideProps() {
+  try {
+    const { data: packages, error } = await supabase
+      .from('packages')
+      .select('*');
+
+    if (error) throw error;
+
+    return {
+      props: {
+        initialPackages: packages || [],
+      },
+    };
+  } catch (e) {
+    console.error('Database connection handling error:', e);
+    return {
+      props: {
+        initialPackages: [],
+      },
+    };
+  }
 }
