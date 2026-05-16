@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
-import Header from '../components/Header';
+import { Header } from '../components/Header'; // FIX: Wrapped in curly braces to match named export
 import Footer from '../components/Footer';
 
 const packages = [
@@ -32,7 +32,6 @@ export default function PackagesPage() {
   const [loadingId, setLoadingId] = useState(null);
 
   const makePayment = async (packageItem) => {
-    // Check if Razorpay script is actually loaded
     if (!window || !window.Razorpay) {
       alert("Razorpay SDK failed to load or is initializing. Please wait a second and try again.");
       return;
@@ -41,7 +40,6 @@ export default function PackagesPage() {
     setLoadingId(packageItem.id);
 
     try {
-      // 1. Create the Order on our server
       const res = await fetch('/api/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +49,6 @@ export default function PackagesPage() {
         }),
       });
 
-      // FIX 1: Inspect response health BEFORE trying to parse JSON to prevent HTML parsing crashes
       if (!res.ok) {
         const textError = await res.text();
         console.error("Server HTML Error Snippet:", textError.slice(0, 300));
@@ -64,7 +61,6 @@ export default function PackagesPage() {
         throw new Error("Invalid order data returned from server backend.");
       }
 
-      // 2. Initialize Razorpay Options
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID, 
         amount: orderData.amount,
@@ -84,7 +80,6 @@ export default function PackagesPage() {
         theme: { color: "#2563eb" }, 
       };
 
-      // FIX 2: Safeguard initialization sequence directly on window element
       const RazorpayInstance = window.Razorpay;
       const paymentObject = new RazorpayInstance(options);
       
@@ -103,12 +98,11 @@ export default function PackagesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pt-16"> {/* Added pt-16 to clear your header's "fixed" layout */}
       <Head>
         <title>Packages | SpotOnTrip</title>
       </Head>
 
-      {/* Kept beforeInteractive for maximum responsiveness */}
       <Script 
         id="razorpay-checkout-js" 
         src="https://checkout.razorpay.com/v1/checkout.js" 
