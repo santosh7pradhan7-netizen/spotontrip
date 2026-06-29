@@ -8,6 +8,12 @@ export default function Home({ initialPackages }) {
   const [activeTab, setActiveTab] = useState('packages'); 
   const [packagesList] = useState(initialPackages || []);
 
+  // --- INTEGRATION STATES ---
+  const [hotelSearchCity, setHotelSearchCity] = useState('Goa');
+  const [liveHotels, setLiveHotels] = useState([]);
+  const [loadingHotels, setLoadingHotels] = useState(false);
+  const [hasSearchedHotels, setHasSearchedHotels] = useState(false);
+
   const tabs = [
     { id: 'packages', label: '🏖️ Tour Packages' },
     { id: 'flights', label: '✈️ Flights' },
@@ -16,6 +22,24 @@ export default function Home({ initialPackages }) {
     { id: 'hotels', label: '🏨 Luxury Hotels' },
     { id: 'events', label: '🎟️ Local Events' }
   ];
+
+  // Separate Dynamic Handler for the Luxury Hotels stream
+  const handleHotelSearch = async (e) => {
+    e.preventDefault();
+    setLoadingHotels(true);
+    setHasSearchedHotels(true);
+    try {
+      const res = await fetch(`/api/search-hotels?city=${encodeURIComponent(hotelSearchCity)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLiveHotels(data);
+      }
+    } catch (err) {
+      console.error("Live hotel connection channel error:", err);
+    } finally {
+      setLoadingHotels(false);
+    }
+  };
 
   return (
     <div style={{ backgroundColor: '#fcfbf7', minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif', color: '#111827' }}>
@@ -85,204 +109,269 @@ export default function Home({ initialPackages }) {
 
           {/* INPUT FORM CHANNELS */}
           <div style={{ padding: '32px' }}>
-            <form 
-              onSubmit={(e) => { 
-                e.preventDefault(); 
-                const fromVal = e.target.elements[0]?.value || '';
-                const toVal = e.target.elements[1]?.value || '';
-                const dateOrTierVal = e.target.elements[2]?.value || '';
-                window.location.href = `/search?category=${activeTab}&from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}&date=${encodeURIComponent(dateOrTierVal)}&tier=${encodeURIComponent(dateOrTierVal)}`;
-              }} 
-              style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', alignItems: 'end' }}
-            >
-              
-              {activeTab === 'packages' && (
-                <>
-                  <div>
-                    <label style={inputLabelStyle}>Departure Station</label>
-                    <input type="text" className="search-input" defaultValue="Rajpura Junction (RPJ)" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Target Destination</label>
-                    <input type="text" className="search-input" placeholder="e.g. Rishikesh River Resort" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Travel Timeline</label>
-                    <input type="date" className="search-input" style={inputElementStyle} />
-                  </div>
-                </>
-              )}
+            {activeTab === 'hotels' ? (
+              /* SMOOTH INTEGRATED HOTEL OPTION GRID TRIGGER FORM */
+              <form onSubmit={handleHotelSearch} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', alignItems: 'end' }}>
+                <div>
+                  <label style={inputLabelStyle}>City / Resort Zone</label>
+                  <select 
+                    value={hotelSearchCity} 
+                    onChange={(e) => setHotelSearchCity(e.target.value)}
+                    className="search-input" 
+                    style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px', cursor: 'pointer' }}
+                  >
+                    <option value="Goa">Goa Coastline</option>
+                    <option value="Mumbai">Mumbai Metro</option>
+                    <option value="Delhi">Delhi Capital</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={inputLabelStyle}>Check In - Check Out</label>
+                  <input type="text" className="search-input" defaultValue="10 Jul - 15 Jul 2026" style={inputElementStyle} />
+                </div>
+                <div>
+                  <label style={inputLabelStyle}>Room Occupancy</label>
+                  <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
+                    <option value="Deluxe Room">1 Deluxe Suite, 2 Adults</option>
+                    <option value="Family Suite">2 Family Suite, 4 Adults</option>
+                  </select>
+                </div>
+                <button type="submit" style={searchSubmitButtonStyle}>
+                  {loadingHotels ? '🔄 Syncing Feeds...' : '🔍 Search Live Inventory'}
+                </button>
+              </form>
+            ) : (
+              /* RESTORED PREVIOUS ROUTING FOR CONVENTIONAL TABS */
+              <form 
+                onSubmit={(e) => { 
+                  e.preventDefault(); 
+                  const fromVal = e.target.elements[0]?.value || '';
+                  const toVal = e.target.elements[1]?.value || '';
+                  const dateOrTierVal = e.target.elements[2]?.value || '';
+                  window.location.href = `/search?category=${activeTab}&from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}&date=${encodeURIComponent(dateOrTierVal)}&tier=${encodeURIComponent(dateOrTierVal)}`;
+                }} 
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', alignItems: 'end' }}
+              >
+                {activeTab === 'packages' && (
+                  <>
+                    <div>
+                      <label style={inputLabelStyle}>Departure Station</label>
+                      <input type="text" className="search-input" defaultValue="Rajpura Junction (RPJ)" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Target Destination</label>
+                      <input type="text" className="search-input" placeholder="e.g. Rishikesh River Resort" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Travel Timeline</label>
+                      <input type="date" className="search-input" style={inputElementStyle} />
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'flights' && (
-                <>
-                  <div>
-                    <label style={inputLabelStyle}>From (Airport)</label>
-                    <input type="text" className="search-input" placeholder="Origin Code (e.g. IXC)" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>To (Airport)</label>
-                    <input type="text" className="search-input" placeholder="Destination (e.g. DEL)" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Class Selection</label>
-                    <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                      <option value="Economy">Economy Comfort</option>
-                      <option value="Business">Business Premium</option>
-                    </select>
-                  </div>
-                </>
-              )}
+                {activeTab === 'flights' && (
+                  <>
+                    <div>
+                      <label style={inputLabelStyle}>From (Airport)</label>
+                      <input type="text" className="search-input" placeholder="Origin Code (e.g. IXC)" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>To (Airport)</label>
+                      <input type="text" className="search-input" placeholder="Destination (e.g. DEL)" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Class Selection</label>
+                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
+                        <option value="Economy">Economy Comfort</option>
+                        <option value="Business">Business Premium</option>
+                      </select>
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'buses' && (
-                <>
-                  <div>
-                    <label style={inputLabelStyle}>Pickup Location</label>
-                    <input type="text" className="search-input" defaultValue="Rajpura Bypass" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Drop Destination</label>
-                    <input type="text" className="search-input" placeholder="City Terminal Hub" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Coach Class</label>
-                    <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                      <option value="AC Sleeper">AC Sleeper Volvo</option>
-                      <option value="Luxury Seater">Luxury Seater Scania</option>
-                    </select>
-                  </div>
-                </>
-              )}
+                {activeTab === 'buses' && (
+                  <>
+                    <div>
+                      <label style={inputLabelStyle}>Pickup Location</label>
+                      <input type="text" className="search-input" defaultValue="Rajpura Bypass" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Drop Destination</label>
+                      <input type="text" className="search-input" placeholder="City Terminal Hub" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Coach Class</label>
+                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
+                        <option value="AC Sleeper">AC Sleeper Volvo</option>
+                        <option value="Luxury Seater">Luxury Seater Scania</option>
+                      </select>
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'trains' && (
-                <>
-                  <div>
-                    <label style={inputLabelStyle}>From (Station)</label>
-                    <input type="text" className="search-input" defaultValue="Rajpura Jn - RPJ" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>To (Station)</label>
-                    <input type="text" className="search-input" placeholder="Station Name / Code" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Travel Class Tier</label>
-                    <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                      <option value="1A">AC First Class (1A)</option>
-                      <option value="2A">AC 2 Tier (2A)</option>
-                      <option value="CC">Vande Bharat (CC)</option>
-                    </select>
-                  </div>
-                </>
-              )}
+                {activeTab === 'trains' && (
+                  <>
+                    <div>
+                      <label style={inputLabelStyle}>From (Station)</label>
+                      <input type="text" className="search-input" defaultValue="Rajpura Jn - RPJ" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>To (Station)</label>
+                      <input type="text" className="search-input" placeholder="Station Name / Code" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Travel Class Tier</label>
+                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
+                        <option value="1A">AC First Class (1A)</option>
+                        <option value="2A">AC 2 Tier (2A)</option>
+                        <option value="CC">Vande Bharat (CC)</option>
+                      </select>
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'hotels' && (
-                <>
-                  <div>
-                    <label style={inputLabelStyle}>City / Resort Zone</label>
-                    <input type="text" className="search-input" placeholder="Where are you staying?" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Check In - Check Out</label>
-                    <input type="text" className="search-input" placeholder="Select dates" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Room Occupancy</label>
-                    <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                      <option value="Deluxe Room">1 Deluxe Suite, 2 Adults</option>
-                      <option value="Family Suite">2 Family Suite, 4 Adults</option>
-                    </select>
-                  </div>
-                </>
-              )}
+                {activeTab === 'events' && (
+                  <>
+                    <div>
+                      <label style={inputLabelStyle}>City Location</label>
+                      <input type="text" className="search-input" defaultValue="Chandigarh Tricity" style={inputElementStyle} />
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Event Category</label>
+                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
+                        <option value="Music Festivals">Music Festivals & Concerts</option>
+                        <option value="Amusement Parks">Amusement Park Passes</option>
+                        <option value="Food Retreats">Food & Camping Retreats</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={inputLabelStyle}>Ticket Count</label>
+                      <input type="number" className="search-input" defaultValue="1" min="1" style={inputElementStyle} />
+                    </div>
+                  </>
+                )}
 
-              {activeTab === 'events' && (
-                <>
-                  <div>
-                    <label style={inputLabelStyle}>City Location</label>
-                    <input type="text" className="search-input" defaultValue="Chandigarh Tricity" style={inputElementStyle} />
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Event Category</label>
-                    <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                      <option value="Music Festivals">Music Festivals & Concerts</option>
-                      <option value="Amusement Parks">Amusement Park Passes</option>
-                      <option value="Food Retreats">Food & Camping Retreats</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={inputLabelStyle}>Ticket Count</label>
-                    <input type="number" className="search-input" defaultValue="1" min="1" style={inputElementStyle} />
-                  </div>
-                </>
-              )}
-
-              <button type="submit" style={searchSubmitButtonStyle}>
-                🔍 Search Open Inventory
-              </button>
-            </form>
+                <button type="submit" style={searchSubmitButtonStyle}>
+                  🔍 Search Open Inventory
+                </button>
+              </form>
+            )}
           </div>
         </div>
       </div>
 
-      {/* --- SECTION 2: LIVE DYNAMIC TOUR SHOWCASE GRID --- */}
+      {/* --- LIVE INTERACTIVE RESULTS DISPLAY AND DEFAULT MARGIN SHOWCASE --- */}
       <div style={{ maxWidth: '1200px', margin: '100px auto 80px auto', padding: '0 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+        
+        {/* HOTEL LIVE RESULT GRID SECTION OR DEFAULT TOUR MATRIX */}
+        {activeTab === 'hotels' && hasSearchedHotels ? (
           <div>
-            <span style={{ color: '#0f766e', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>Top Selected Holiday Escapes</span>
-            <h3 style={{ fontSize: '2.4rem', fontWeight: '700', margin: '0', color: '#0e2a1b', fontFamily: '"Playfair Display", serif' }}>Trending Seasonal Itineraries</h3>
-          </div>
-          <Link href="/packages" style={inventoryLinkTriggerStyle}>
-            View Full Inventory Matrix →
-          </Link>
-        </div>
+            <div style={{ marginBottom: '40px' }}>
+              <span style={{ color: '#0f766e', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>
+                Verified Room Allotments
+              </span>
+              <h3 style={{ fontSize: '2.4rem', fontWeight: '700', margin: '0', color: '#0e2a1b', fontFamily: '"Playfair Display", serif' }}>
+                Available Stays in {hotelSearchCity}
+              </h3>
+            </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '32px' }}>
-          {packagesList.length === 0 ? (
-            // Premium Local Fallback Displays if Supabase Sync is loading
-            [
-              { id: "mock-1", title: "Rishikesh Luxury River Canopy Resort", location: "Rishikesh, Uttarakhand", duration: "4 Days, 3 Nights", price: "14,500", img: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80", desc: "Premium river-facing luxury suites containing private beach camp accesses and guided whitewater rapids." },
-              { id: "mock-2", title: "Manali Alpine Sanctuary Cottage Stay", location: "Manali, Himachal", duration: "5 Days, 4 Nights", price: "18,200", img: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=600&q=80", desc: "Breathtaking snow-peaks terrace cottages equipped with customized paragliding launch pads." },
-              { id: "mock-3", title: "Thar Desert Royal Luxury Tent Camping", location: "Jaisalmer, Rajasthan", duration: "3 Days, 2 Nights", price: "11,900", img: "https://images.unsplash.com/photo-1473116763269-255f74e7e6d0?auto=format&fit=crop&w=600&q=80", desc: "Curated dunes expeditions complete with traditional heritage evening folk setups." }
-            ].map(item => (
-              <div key={item.id} className="package-card" style={packageCardElementStyle}>
-                <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
-                  <img src={item.img} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <span style={packageDurationBadgeStyle}>🕒 {item.duration}</span>
-                </div>
-                <div style={packageCardBodyStyle}>
-                  <div>
-                    <span style={packageLocLabelStyle}>📍 {item.location}</span>
-                    <h4 style={packageCardTitleStyle}>{item.title}</h4>
-                    <p style={packageCardDescStyle}>{item.desc}</p>
-                  </div>
-                  <div style={packageCardFooterStyle}>
-                    <span style={packageCardPriceStyle}>₹{item.price}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / head</small></span>
-                    <Link href="/packages" style={packageCardButtonStyle}>Book Instantly</Link>
-                  </div>
-                </div>
+            {loadingHotels ? (
+              <div style={{ textAlign: 'center', padding: '60px 0', color: '#0f766e', fontWeight: '700' }}>
+                🔄 Synchronizing live logistics paths from distribution hubs...
               </div>
-            ))
-          ) : (
-            packagesList.slice(0, 3).map((item) => (
-              <div key={item.id} className="package-card" style={packageCardElementStyle}>
-                <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
-                  <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <span style={packageDurationBadgeStyle}>🕒 {item.duration}</span>
-                </div>
-                <div style={packageCardBodyStyle}>
-                  <div>
-                    <span style={packageLocLabelStyle}>📍 {item.location}</span>
-                    <h4 style={packageCardTitleStyle}>{item.title}</h4>
-                    <p style={packageCardDescStyle}>{item.description}</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '32px' }}>
+                {liveHotels.map((hotel) => (
+                  <div key={hotel.id} className="package-card" style={packageCardElementStyle}>
+                    <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
+                      <img src={hotel.image} alt={hotel.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{ position: 'absolute', top: '16px', left: '16px', display: 'flex', gap: '6px' }}>
+                        {hotel.tags?.map((tag, idx) => (
+                          <span key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.95)', color: '#0e2a1b', padding: '4px 10px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase' }}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <span style={packageDurationBadgeStyle}>★ {hotel.rating} Rating</span>
+                    </div>
+                    <div style={packageCardBodyStyle}>
+                      <div>
+                        <span style={packageLocLabelStyle}>📍 {hotel.location}</span>
+                        <h4 style={packageCardTitleStyle}>{hotel.name}</h4>
+                        <p style={packageCardDescStyle}>Premium dynamic room allotment directly mapped from global distribution partners.</p>
+                      </div>
+                      <div style={packageCardFooterStyle}>
+                        <span style={packageCardPriceStyle}>₹{hotel.pricePerNight.toLocaleString('en-IN')}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / night</small></span>
+                        <Link href={`/booking?id=${hotel.id}&type=hotel&price=${hotel.pricePerNight}`} style={packageCardButtonStyle}>Book Instantly</Link>
+                      </div>
+                    </div>
                   </div>
-                  <div style={packageCardFooterStyle}>
-                    <span style={packageCardPriceStyle}>₹{item.price}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / head</small></span>
-                    <Link href="/packages" style={packageCardButtonStyle}>Book Instantly</Link>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))
-          )}
-        </div>
+            )}
+          </div>
+        ) : (
+          /* TRADITIONAL RESTORED SELECTION GRID FOR ALL OTHER CHANNELS */
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+              <div>
+                <span style={{ color: '#0f766e', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>Top Selected Holiday Escapes</span>
+                <h3 style={{ fontSize: '2.4rem', fontWeight: '700', margin: '0', color: '#0e2a1b', fontFamily: '"Playfair Display", serif' }}>Trending Seasonal Itineraries</h3>
+              </div>
+              <Link href="/packages" style={inventoryLinkTriggerStyle}>
+                View Full Inventory Matrix →
+              </Link>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '32px' }}>
+              {packagesList.length === 0 ? (
+                [
+                  { id: "mock-1", title: "Rishikesh Luxury River Canopy Resort", location: "Rishikesh, Uttarakhand", duration: "4 Days, 3 Nights", price: "14,500", img: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80", desc: "Premium river-facing luxury suites containing private beach camp accesses and guided whitewater rapids." },
+                  { id: "mock-2", title: "Manali Alpine Sanctuary Cottage Stay", location: "Manali, Himachal", duration: "5 Days, 4 Nights", price: "18,200", img: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=600&q=80", desc: "Breathtaking snow-peaks terrace cottages equipped with customized paragliding launch pads." },
+                  { id: "mock-3", title: "Thar Desert Royal Luxury Tent Camping", location: "Jaisalmer, Rajasthan", duration: "3 Days, 2 Nights", price: "11,900", img: "https://images.unsplash.com/photo-1473116763269-255f74e7e6d0?auto=format&fit=crop&w=600&q=80", desc: "Curated dunes expeditions complete with traditional heritage evening folk setups." }
+                ].map(item => (
+                  <div key={item.id} className="package-card" style={packageCardElementStyle}>
+                    <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
+                      <img src={item.img} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <span style={packageDurationBadgeStyle}>🕒 {item.duration}</span>
+                    </div>
+                    <div style={packageCardBodyStyle}>
+                      <div>
+                        <span style={packageLocLabelStyle}>📍 {item.location}</span>
+                        <h4 style={packageCardTitleStyle}>{item.title}</h4>
+                        <p style={packageCardDescStyle}>{item.desc}</p>
+                      </div>
+                      <div style={packageCardFooterStyle}>
+                        <span style={packageCardPriceStyle}>₹{item.price}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / head</small></span>
+                        <Link href="/packages" style={packageCardButtonStyle}>Book Instantly</Link>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                packagesList.slice(0, 3).map((item) => (
+                  <div key={item.id} className="package-card" style={packageCardElementStyle}>
+                    <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
+                      <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <span style={packageDurationBadgeStyle}>🕒 {item.duration}</span>
+                    </div>
+                    <div style={packageCardBodyStyle}>
+                      <div>
+                        <span style={packageLocLabelStyle}>📍 {item.location}</span>
+                        <h4 style={packageCardTitleStyle}>{item.title}</h4>
+                        <p style={packageCardDescStyle}>{item.description}</p>
+                      </div>
+                      <div style={packageCardFooterStyle}>
+                        <span style={packageCardPriceStyle}>₹{item.price}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / head</small></span>
+                        <Link href="/packages" style={packageCardButtonStyle}>Book Instantly</Link>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* --- SECTION 3: CORE PLATFORM VALUE METRICS --- */}
@@ -324,7 +413,7 @@ const heroWrapperStyle = {
 };
 
 const navBarStyle = {
-  position: 'absolute', top: 0, left: 0, right: 0, padding: '28px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto', zIndex: 10
+  position: 'absolute', top: 0, left: 0, right: 0, padding: '28px 40px', display: 'flex', justifyXontent: 'space-between', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto', zIndex: 10
 };
 
 const logoStyle = {
@@ -368,7 +457,7 @@ const inputElementStyle = {
 };
 
 const searchSubmitButtonStyle = {
-  backgroundColor: '#0f766e', color: '#ffffff', border: 'none', padding: '14px 24px', borderRadius: '6px', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 6px 20px rgba(15, 118, 110, 0.25)', height: '47px'
+  backgroundColor: '#0f766e', color: '#ffffff', border: 'none', padding: '14px 24px', borderRadius: '6px', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 6px 20px rgba(15, 118, 110, 0.25)', height: '47px', width: '100%'
 };
 
 const inventoryLinkTriggerStyle = {
@@ -384,7 +473,7 @@ const packageDurationBadgeStyle = {
 };
 
 const packageCardBodyStyle = {
-  padding: '26px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+  padding: '26px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyXontent: 'space-between', justifyContent: 'space-between'
 };
 
 const packageLocLabelStyle = {
