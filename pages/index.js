@@ -1,512 +1,319 @@
 // pages/index.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { supabase } from '../lib/supabaseClient';
+import {
+  Plane, TrainFront, Bus, Hotel, MapPin, ChevronRight, ArrowLeftRight,
+  CheckCircle2, X, ShieldCheck, AlertTriangle, Activity, Star,
+} from 'lucide-react';
+
+const CITIES = [
+  { name: 'Delhi', code: 'DEL' }, { name: 'Mumbai', code: 'BOM' }, { name: 'Bengaluru', code: 'BLR' },
+  { name: 'Hyderabad', code: 'HYD' }, { name: 'Chennai', code: 'MAA' }, { name: 'Kolkata', code: 'CCU' },
+  { name: 'Pune', code: 'PNQ' }, { name: 'Goa', code: 'GOI' }, { name: 'Jaipur', code: 'JAI' }, { name: 'Kochi', code: 'COK' },
+];
+
+const MODES = {
+  flights: { label: 'Flights', icon: Plane, accent: '#FF6B35' },
+  trains: { label: 'Trains', icon: TrainFront, accent: '#16A34A' },
+  buses: { label: 'Bus', icon: Bus, accent: '#FFB800' },
+  hotels: { label: 'Hotels', icon: Hotel, accent: '#0EA5E9' },
+  packages: { label: 'Packages', icon: MapPin, accent: '#A855F7' },
+};
+
+const inr = (n) => '₹' + Number(n).toLocaleString('en-IN');
+const pnr = () => Array.from({ length: 10 }, () => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random() * 32)]).join('');
 
 export default function Home({ initialPackages }) {
-  const [activeTab, setActiveTab] = useState('packages'); 
-  const [packagesList] = useState(initialPackages || []);
+  const [tab, setTab] = useState('flights');
+  const [from, setFrom] = useState(CITIES[0]);
+  const [to, setTo] = useState(CITIES[1]);
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [hotelCity, setHotelCity] = useState('Goa');
 
-  // --- INTEGRATION STATES ---
-  const [hotelSearchCity, setHotelSearchCity] = useState('Goa');
-  const [liveHotels, setLiveHotels] = useState([]);
-  const [loadingHotels, setLoadingHotels] = useState(false);
-  const [hasSearchedHotels, setHasSearchedHotels] = useState(false);
+  const [results, setResults] = useState(null);
+  const [live, setLive] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [selected, setSelected] = useState(null);
 
-  const tabs = [
-    { id: 'packages', label: '🏖️ Tour Packages' },
-    { id: 'flights', label: '✈️ Flights' },
-    { id: 'buses', label: '🚌 Bus Booking' },
-    { id: 'trains', label: '🚊 Train Tickets' },
-    { id: 'hotels', label: '🏨 Luxury Hotels' },
-    { id: 'events', label: '🎟️ Local Events' }
-  ];
+  const swap = () => { setFrom(to); setTo(from); };
 
-  // Separate Dynamic Handler for the Luxury Hotels stream
-  const handleHotelSearch = async (e) => {
-    e.preventDefault();
-    setLoadingHotels(true);
-    setHasSearchedHotels(true);
+  const search = async () => {
+    setLoading(true);
+    setResults(null);
     try {
-      const res = await fetch(`/api/search-hotels?city=${encodeURIComponent(hotelSearchCity)}`);
-      if (res.ok) {
+      if (tab === 'hotels') {
+        const res = await fetch(`/api/search-hotels?city=${encodeURIComponent(hotelCity)}`);
         const data = await res.json();
-        setLiveHotels(data);
+        setResults(Array.isArray(data) ? data : []);
+        setLive(false); // this route is location-name based, not real bookable hotel inventory
+      } else if (tab === 'packages') {
+        setResults(initialPackages);
+        setLive(true);
+      } else {
+        const res = await fetch(
+          `/api/search-transport?mode=${tab}&origin=${encodeURIComponent(from.code)}&destination=${encodeURIComponent(to.code)}&date=${date}`
+        );
+        const data = await res.json();
+        setResults(data.results || []);
+        setLive(!!data.live);
       }
     } catch (err) {
-      console.error("Live hotel connection channel error:", err);
+      console.error(err);
+      setResults([]);
     } finally {
-      setLoadingHotels(false);
+      setLoading(false);
     }
   };
 
+  useEffect(() => { setResults(null); }, [tab]);
+
   return (
-    <div style={{ backgroundColor: '#fcfbf7', minHeight: '100vh', fontFamily: '"Plus Jakarta Sans", system-ui, -apple-system, sans-serif', color: '#111827' }}>
+    <div className="app">
       <Head>
-        <title>SpotOnTrip | Premium Curated Logistics & Escapes</title>
-        <meta name="description" content="Premium curated travel adventures, flights, buses, trains, hotels, and event ticket booking logistics departing from Rajpura." />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,400&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet" />
-        <style>{`
-          .tab-btn { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-          .tab-btn:hover { background-color: #f1f5f1; color: #0f766e; }
-          .package-card { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); border: 1px solid #e9e7e1; }
-          .package-card:hover { transform: translateY(-6px); box-shadow: 0 20px 35px -10px rgba(15, 118, 110, 0.08) !important; border-color: #0f766e; }
-          .search-input { outline: none; border: 1px solid #dcdad2; transition: all 0.2s ease; background-color: #ffffff; color: #0e2a1b; font-weight: 600; }
-          .search-input:focus { border-color: #0f766e !important; box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.08); background-color: #ffffff; }
-        `}</style>
+        <title>SpotOnTrip | Flights, Trains, Bus, Hotels &amp; Packages</title>
+        <meta name="description" content="Book flights, trains, buses, hotels and curated packages across India — live fares, instant UPI/card checkout." />
+        <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <script src="https://checkout.razorpay.com/v1/checkout.js" async />
       </Head>
+      <style>{CSS}</style>
 
-      {/* --- SECTION 1: LUXURY HERO HEADER BACKGROUND --- */}
-      <div style={heroWrapperStyle}>
-        
-        {/* Floating Premium Nav Bar */}
-        <nav style={navBarStyle}>
-          <h1 style={logoStyle}>SpotOnTrip <span style={{ fontSize: '13px', fontStyle: 'italic', color: '#14b8a6', fontFamily: '"Plus Jakarta Sans", sans-serif', letterSpacing: '0' }}>escapes</span></h1>
-          <div style={{ display: 'flex', gap: '28px', alignItems: 'center' }}>
-            <Link href="/packages" style={navLinkStyle}>Explore Trips</Link>
-            <Link href="/admin" style={adminLinkStyle}>🔐 Terminal Admin</Link>
+      <header className="topbar">
+        <div className="brand">
+          <div className="brand-mark">S</div>
+          <div>
+            <div className="brand-name">Spot<span>OnTrip</span></div>
+            <div className="brand-tag">the right fare, spotted first</div>
           </div>
-        </nav>
+        </div>
+        <Link href="/packages" className="nav-link">Explore packages</Link>
+      </header>
 
-        {/* Core Hero Copy Restored */}
-        <div style={heroCenterContainerStyle}>
-          <span style={heroTagStyle}>Summer Vacation Season 2026</span>
-          <h2 style={heroHeadingStyle}>Your Gateway to Flawless Logistics</h2>
-          <p style={heroSubheadingStyle}>
-            Seamlessly reserve customized tour routes, premium regional flights, point-to-point buses, luxury rail transit, stays, and festival events.
-          </p>
+      <section className="hero">
+        <h1>Flights, trains, buses,<br />hotels. Spot on.</h1>
+        <p>Search once, compare live fares, pay with UPI or card, and get your confirmation by email.</p>
+      </section>
+
+      <nav className="tabs">
+        {Object.entries(MODES).map(([key, m]) => {
+          const Icon = m.icon;
+          return (
+            <button key={key} className={`tab ${tab === key ? 'active' : ''}`} style={{ '--accent': m.accent }} onClick={() => setTab(key)}>
+              <Icon size={16} /> {m.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      <main className="content">
+        <div className="search-card">
+          {tab === 'hotels' ? (
+            <div className="field">
+              <span className="field-label">City</span>
+              <select value={hotelCity} onChange={(e) => setHotelCity(e.target.value)}>
+                {CITIES.map((c) => <option key={c.name}>{c.name}</option>)}
+              </select>
+            </div>
+          ) : tab === 'packages' ? (
+            <div className="field-note">Showing all curated packages from our catalogue.</div>
+          ) : (
+            <>
+              <div className="field">
+                <span className="field-label">From</span>
+                <select value={from.code} onChange={(e) => setFrom(CITIES.find((c) => c.code === e.target.value))}>
+                  {CITIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
+              </div>
+              <button className="swap-btn" onClick={swap} aria-label="Swap"><ArrowLeftRight size={16} /></button>
+              <div className="field">
+                <span className="field-label">To</span>
+                <select value={to.code} onChange={(e) => setTo(CITIES.find((c) => c.code === e.target.value))}>
+                  {CITIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <span className="field-label">Date</span>
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              </div>
+            </>
+          )}
+          <button className="search-btn" onClick={search} disabled={loading}>
+            {loading ? 'Searching…' : 'Search'}
+          </button>
         </div>
 
-        {/* --- THE MASTER LOGISTICS PANEL CONSOLE (ELEVATED DESIGN) --- */}
-        <div style={consoleCardWrapperStyle}>
-          
-          {/* Categorized Tab Bar Strip */}
-          <div style={{ display: 'flex', overflowX: 'auto', borderBottom: '1px solid #e9e7e1', backgroundColor: '#fcfbf7', padding: '4px 4px 0 4px' }}>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className="tab-btn"
-                style={{
-                  flex: '1',
-                  whiteSpace: 'nowrap',
-                  padding: '18px 24px',
-                  border: 'none',
-                  background: activeTab === tab.id ? '#ffffff' : 'transparent',
-                  color: activeTab === tab.id ? '#0f766e' : '#6b7280',
-                  fontSize: '0.88rem',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  borderRadius: activeTab === tab.id ? '8px 8px 0 0' : '0',
-                  borderBottom: activeTab === tab.id ? '3px solid #0f766e' : '3px solid transparent'
-                }}
-              >
-                {tab.label}
-              </button>
+        {results && (
+          <div className="results">
+            <div className="results-head">
+              <span>{results.length} results</span>
+              <span className={`live-tag ${live ? 'is-live' : 'is-demo'}`}>
+                <Activity size={12} /> {live ? 'Live data' : 'Demo data — provider not connected yet'}
+              </span>
+            </div>
+            {results.length === 0 && <div className="empty">No results. Try a different search.</div>}
+            {results.map((item) => (
+              <ResultRow key={item.id} item={item} mode={tab} onSelect={setSelected} />
             ))}
           </div>
-
-          {/* INPUT FORM CHANNELS */}
-          <div style={{ padding: '32px' }}>
-            {activeTab === 'hotels' ? (
-              /* SMOOTH INTEGRATED HOTEL OPTION GRID TRIGGER FORM */
-              <form onSubmit={handleHotelSearch} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', alignItems: 'end' }}>
-                <div>
-                  <label style={inputLabelStyle}>City / Resort Zone</label>
-                  <select 
-                    value={hotelSearchCity} 
-                    onChange={(e) => setHotelSearchCity(e.target.value)}
-                    className="search-input" 
-                    style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px', cursor: 'pointer' }}
-                  >
-                    <option value="Goa">Goa Coastline</option>
-                    <option value="Mumbai">Mumbai Metro</option>
-                    <option value="Delhi">Delhi Capital</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={inputLabelStyle}>Check In - Check Out</label>
-                  <input type="text" className="search-input" defaultValue="10 Jul - 15 Jul 2026" style={inputElementStyle} />
-                </div>
-                <div>
-                  <label style={inputLabelStyle}>Room Occupancy</label>
-                  <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                    <option value="Deluxe Room">1 Deluxe Suite, 2 Adults</option>
-                    <option value="Family Suite">2 Family Suite, 4 Adults</option>
-                  </select>
-                </div>
-                <button type="submit" style={searchSubmitButtonStyle}>
-                  {loadingHotels ? '🔄 Syncing Feeds...' : '🔍 Search Live Inventory'}
-                </button>
-              </form>
-            ) : (
-              /* RESTORED PREVIOUS ROUTING FOR CONVENTIONAL TABS */
-              <form 
-                onSubmit={(e) => { 
-                  e.preventDefault(); 
-                  const fromVal = e.target.elements[0]?.value || '';
-                  const toVal = e.target.elements[1]?.value || '';
-                  const dateOrTierVal = e.target.elements[2]?.value || '';
-                  window.location.href = `/search?category=${activeTab}&from=${encodeURIComponent(fromVal)}&to=${encodeURIComponent(toVal)}&date=${encodeURIComponent(dateOrTierVal)}&tier=${encodeURIComponent(dateOrTierVal)}`;
-                }} 
-                style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', alignItems: 'end' }}
-              >
-                {activeTab === 'packages' && (
-                  <>
-                    <div>
-                      <label style={inputLabelStyle}>Departure Station</label>
-                      <input type="text" className="search-input" defaultValue="Rajpura Junction (RPJ)" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Target Destination</label>
-                      <input type="text" className="search-input" placeholder="e.g. Rishikesh River Resort" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Travel Timeline</label>
-                      <input type="date" className="search-input" style={inputElementStyle} />
-                    </div>
-                  </>
-                )}
-
-                {activeTab === 'flights' && (
-                  <>
-                    <div>
-                      <label style={inputLabelStyle}>From (Airport)</label>
-                      <input type="text" className="search-input" placeholder="Origin Code (e.g. IXC)" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>To (Airport)</label>
-                      <input type="text" className="search-input" placeholder="Destination (e.g. DEL)" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Class Selection</label>
-                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                        <option value="Economy">Economy Comfort</option>
-                        <option value="Business">Business Premium</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {activeTab === 'buses' && (
-                  <>
-                    <div>
-                      <label style={inputLabelStyle}>Pickup Location</label>
-                      <input type="text" className="search-input" defaultValue="Rajpura Bypass" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Drop Destination</label>
-                      <input type="text" className="search-input" placeholder="City Terminal Hub" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Coach Class</label>
-                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                        <option value="AC Sleeper">AC Sleeper Volvo</option>
-                        <option value="Luxury Seater">Luxury Seater Scania</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {activeTab === 'trains' && (
-                  <>
-                    <div>
-                      <label style={inputLabelStyle}>From (Station)</label>
-                      <input type="text" className="search-input" defaultValue="Rajpura Jn - RPJ" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>To (Station)</label>
-                      <input type="text" className="search-input" placeholder="Station Name / Code" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Travel Class Tier</label>
-                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                        <option value="1A">AC First Class (1A)</option>
-                        <option value="2A">AC 2 Tier (2A)</option>
-                        <option value="CC">Vande Bharat (CC)</option>
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {activeTab === 'events' && (
-                  <>
-                    <div>
-                      <label style={inputLabelStyle}>City Location</label>
-                      <input type="text" className="search-input" defaultValue="Chandigarh Tricity" style={inputElementStyle} />
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Event Category</label>
-                      <select className="search-input" style={{ ...inputElementStyle, backgroundColor: '#fff', height: '47px' }}>
-                        <option value="Music Festivals">Music Festivals & Concerts</option>
-                        <option value="Amusement Parks">Amusement Park Passes</option>
-                        <option value="Food Retreats">Food & Camping Retreats</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={inputLabelStyle}>Ticket Count</label>
-                      <input type="number" className="search-input" defaultValue="1" min="1" style={inputElementStyle} />
-                    </div>
-                  </>
-                )}
-
-                <button type="submit" style={searchSubmitButtonStyle}>
-                  🔍 Search Open Inventory
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* --- LIVE INTERACTIVE RESULTS DISPLAY AND DEFAULT MARGIN SHOWCASE --- */}
-      <div style={{ maxWidth: '1200px', margin: '100px auto 80px auto', padding: '0 24px' }}>
-        
-        {/* HOTEL LIVE RESULT GRID SECTION OR DEFAULT TOUR MATRIX */}
-        {activeTab === 'hotels' && hasSearchedHotels ? (
-          <div>
-            <div style={{ marginBottom: '40px' }}>
-              <span style={{ color: '#0f766e', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>
-                Verified Room Allotments
-              </span>
-              <h3 style={{ fontSize: '2.4rem', fontWeight: '700', margin: '0', color: '#0e2a1b', fontFamily: '"Playfair Display", serif' }}>
-                Available Stays in {hotelSearchCity}
-              </h3>
-            </div>
-
-            {loadingHotels ? (
-              <div style={{ textAlign: 'center', padding: '60px 0', color: '#0f766e', fontWeight: '700' }}>
-                🔄 Synchronizing live logistics paths from distribution hubs...
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '32px' }}>
-                {liveHotels.map((hotel) => (
-                  <div key={hotel.id} className="package-card" style={packageCardElementStyle}>
-                    <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
-                      <img src={hotel.image} alt={hotel.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <div style={{ position: 'absolute', top: '16px', left: '16px', display: 'flex', gap: '6px' }}>
-                        {hotel.tags?.map((tag, idx) => (
-                          <span key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.95)', color: '#0e2a1b', padding: '4px 10px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase' }}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <span style={packageDurationBadgeStyle}>★ {hotel.rating} Rating</span>
-                    </div>
-                    <div style={packageCardBodyStyle}>
-                      <div>
-                        <span style={packageLocLabelStyle}>📍 {hotel.location}</span>
-                        <h4 style={packageCardTitleStyle}>{hotel.name}</h4>
-                        <p style={packageCardDescStyle}>Premium dynamic room allotment directly mapped from global distribution partners.</p>
-                      </div>
-                      <div style={packageCardFooterStyle}>
-                        <span style={packageCardPriceStyle}>₹{hotel.pricePerNight.toLocaleString('en-IN')}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / night</small></span>
-                        <Link href={`/booking?id=${hotel.id}&type=hotel&price=${hotel.pricePerNight}`} style={packageCardButtonStyle}>Book Instantly</Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          /* TRADITIONAL RESTORED SELECTION GRID FOR ALL OTHER CHANNELS */
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
-              <div>
-                <span style={{ color: '#0f766e', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px', display: 'block', marginBottom: '4px' }}>Top Selected Holiday Escapes</span>
-                <h3 style={{ fontSize: '2.4rem', fontWeight: '700', margin: '0', color: '#0e2a1b', fontFamily: '"Playfair Display", serif' }}>Trending Seasonal Itineraries</h3>
-              </div>
-              <Link href="/packages" style={inventoryLinkTriggerStyle}>
-                View Full Inventory Matrix →
-              </Link>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '32px' }}>
-              {packagesList.length === 0 ? (
-                [
-                  { id: "mock-1", title: "Rishikesh Luxury River Canopy Resort", location: "Rishikesh, Uttarakhand", duration: "4 Days, 3 Nights", price: "14,500", img: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=600&q=80", desc: "Premium river-facing luxury suites containing private beach camp accesses and guided whitewater rapids." },
-                  { id: "mock-2", title: "Manali Alpine Sanctuary Cottage Stay", location: "Manali, Himachal", duration: "5 Days, 4 Nights", price: "18,200", img: "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=600&q=80", desc: "Breathtaking snow-peaks terrace cottages equipped with customized paragliding launch pads." },
-                  { id: "mock-3", title: "Thar Desert Royal Luxury Tent Camping", location: "Jaisalmer, Rajasthan", duration: "3 Days, 2 Nights", price: "11,900", img: "https://images.unsplash.com/photo-1473116763269-255f74e7e6d0?auto=format&fit=crop&w=600&q=80", desc: "Curated dunes expeditions complete with traditional heritage evening folk setups." }
-                ].map(item => (
-                  <div key={item.id} className="package-card" style={packageCardElementStyle}>
-                    <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
-                      <img src={item.img} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <span style={packageDurationBadgeStyle}>🕒 {item.duration}</span>
-                    </div>
-                    <div style={packageCardBodyStyle}>
-                      <div>
-                        <span style={packageLocLabelStyle}>📍 {item.location}</span>
-                        <h4 style={packageCardTitleStyle}>{item.title}</h4>
-                        <p style={packageCardDescStyle}>{item.desc}</p>
-                      </div>
-                      <div style={packageCardFooterStyle}>
-                        <span style={packageCardPriceStyle}>₹{item.price}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / head</small></span>
-                        <Link href="/packages" style={packageCardButtonStyle}>Book Instantly</Link>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                packagesList.slice(0, 3).map((item) => (
-                  <div key={item.id} className="package-card" style={packageCardElementStyle}>
-                    <div style={{ position: 'relative', height: '230px', overflow: 'hidden' }}>
-                      <img src={item.image} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <span style={packageDurationBadgeStyle}>🕒 {item.duration}</span>
-                    </div>
-                    <div style={packageCardBodyStyle}>
-                      <div>
-                        <span style={packageLocLabelStyle}>📍 {item.location}</span>
-                        <h4 style={packageCardTitleStyle}>{item.title}</h4>
-                        <p style={packageCardDescStyle}>{item.description}</p>
-                      </div>
-                      <div style={packageCardFooterStyle}>
-                        <span style={packageCardPriceStyle}>₹{item.price}<small style={{ fontSize: '0.75rem', color: '#6b7280', fontWeight: '400' }}> / head</small></span>
-                        <Link href="/packages" style={packageCardButtonStyle}>Book Instantly</Link>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
         )}
-      </div>
+      </main>
 
-      {/* --- SECTION 3: CORE PLATFORM VALUE METRICS --- */}
-      <div style={{ backgroundColor: '#0e2a1b', color: '#ffffff', padding: '90px 24px', borderTop: '4px solid #14b8a6' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '48px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.6rem', marginBottom: '16px' }}>⚡</div>
-            <h5 style={metricTitleStyle}>Instant Verification API</h5>
-            <p style={metricDescStyle}>Every single slot booking triggers synchronous layout checks against live supply availability streams.</p>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.6rem', marginBottom: '16px' }}>🛡️</div>
-            <h5 style={metricTitleStyle}>Escrow Secure Shield</h5>
-            <p style={metricDescStyle}>Financial clearance paths execution handled safely using hardcoded Razorpay transaction channels.</p>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '2.6rem', marginBottom: '16px' }}>✉️</div>
-            <h5 style={metricTitleStyle}>Automated Micro-Receipts</h5>
-            <p style={metricDescStyle}>The moment a transaction captures, webhooks dispatch real-time digital entry invoices straight to email inboxes.</p>
-          </div>
+      {selected && <BookingModal item={selected} mode={tab} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+function ResultRow({ item, mode, onSelect }) {
+  const Icon = MODES[mode].icon;
+  const title = item.carrier || item.name || item.operator || item.title;
+  const sub = item.flightNo || item.trainNo || item.type || item.location || item.duration_days || '';
+  const price = item.price ?? item.pricePerNight ?? 0;
+  return (
+    <div className="result-row">
+      <div className="result-icon" style={{ background: MODES[mode].accent + '22', color: MODES[mode].accent }}>
+        <Icon size={18} />
+      </div>
+      <div className="result-main">
+        <div className="result-title">{title}</div>
+        <div className="result-sub">{sub}</div>
+      </div>
+      {(item.departure || item.arrival) && (
+        <div className="result-time">
+          <span>{item.departure}</span><span className="arrow">→</span><span>{item.arrival}</span>
         </div>
+      )}
+      <div className="result-action">
+        <span className="price">{mode === 'hotels' ? `${inr(price)}/night` : inr(price)}</span>
+        <button onClick={() => onSelect(item)}>Select <ChevronRight size={14} /></button>
       </div>
     </div>
   );
 }
 
-// THEMED SYSTEM DESIGN OBJECTS
-const heroWrapperStyle = {
-  position: 'relative', 
-  minHeight: '85vh', 
-  backgroundImage: 'linear-gradient(rgba(14, 42, 27, 0.45), rgba(14, 42, 27, 0.75)), url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1920&q=80")', 
-  backgroundSize: 'cover', 
-  backgroundPosition: 'center',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  alignItems: 'center',
-  padding: '120px 20px 80px 20px'
-};
+function BookingModal({ item, mode, onClose }) {
+  const [step, setStep] = useState('details'); // details | processing | done | error
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [booking, setBooking] = useState(null);
 
-const navBarStyle = {
-  position: 'absolute', top: 0, left: 0, right: 0, padding: '28px 40px', display: 'flex', justifyXontent: 'space-between', justifyContent: 'space-between', alignItems: 'center', maxWidth: '1200px', margin: '0 auto', zIndex: 10
-};
+  const amountRupees = item.price ?? item.pricePerNight ?? 0;
+  const validDetails = name.trim().length > 1 && /\S+@\S+\.\S+/.test(email) && phone.trim().length >= 10;
 
-const logoStyle = {
-  color: '#ffffff', margin: 0, fontSize: '1.75rem', fontWeight: '800', fontFamily: '"Playfair Display", serif', letterSpacing: '-0.02em'
-};
+  const pay = async () => {
+    setErrorMsg('');
+    setStep('processing');
+    try {
+      // create-order.js expects the amount in RUPEES — it multiplies by 100 itself
+      const orderRes = await fetch('/api/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amountRupees, currency: 'INR' }),
+      });
+      const order = await orderRes.json();
+      if (!order.id) throw new Error(order.message || 'Could not create order');
 
-const navLinkStyle = {
-  color: '#ffffff', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', letterSpacing: '0.02em'
-};
+      const rzp = new window.Razorpay({
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: 'INR',
+        order_id: order.id,
+        name: 'SpotOnTrip',
+        description: `${item.carrier || item.name || item.title || 'Booking'}`,
+        prefill: { name, email, contact: phone },
+        theme: { color: '#FF6B35' },
+        notes: {
+          customer_name: name,
+          package_title: item.carrier || item.name || item.title || mode,
+          travel_date: new Date().toISOString().slice(0, 10),
+          total_guests: 1,
+        },
+        handler: async (response) => {
+          try {
+            const verifyRes = await fetch('/api/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+              }),
+            });
+            const verify = await verifyRes.json();
+            if (!verify.success) throw new Error('Signature verification failed');
 
-const adminLinkStyle = {
-  color: 'rgba(255,255,255,0.85)', textDecoration: 'none', fontWeight: '700', fontSize: '0.92rem', backgroundColor: 'rgba(255,255,255,0.12)', padding: '6px 14px', borderRadius: '6px', backdropFilter: 'blur(4px)'
-};
+            setBooking({
+              id: pnr(),
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              amount: amountRupees,
+            });
+            setStep('done');
+          } catch (err) {
+            setErrorMsg('Payment went through, but we could not verify it. Contact support with your payment ID: ' + response.razorpay_payment_id);
+            setStep('error');
+          }
+        },
+        modal: { ondismiss: () => setStep('details') },
+      });
+      rzp.on('payment.failed', (resp) => {
+        setErrorMsg('Payment failed: ' + (resp.error?.description || 'please try again.'));
+        setStep('error');
+      });
+      rzp.open();
+    } catch (err) {
+      setErrorMsg(err.message || 'Something went wrong.');
+      setStep('error');
+    }
+  };
 
-const heroCenterContainerStyle = {
-  textAlign: 'center', color: '#ffffff', marginBottom: '44px', maxWidth: '780px'
-};
+  return (
+    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && step !== 'processing' && onClose()}>
+      <div className="modal">
+        <button className="modal-close" onClick={onClose}><X size={18} /></button>
 
-const heroTagStyle = {
-  backgroundColor: 'rgba(20, 184, 166, 0.25)', color: '#2dd4bf', padding: '6px 18px', borderRadius: '20px', fontSize: '0.82rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px', border: '1px solid rgba(45,212,191,0.3)'
-};
+        {step === 'details' && (
+          <>
+            <h3>Your details</h3>
+            <p className="modal-sub">{item.carrier || item.name || item.title} — {inr(amountRupees)}</p>
+            <input placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+            <input placeholder="Email (for your confirmation)" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <button className="primary-btn" disabled={!validDetails} onClick={pay}>
+              <ShieldCheck size={16} /> Pay {inr(amountRupees)}
+            </button>
+          </>
+        )}
 
-const heroHeadingStyle = {
-  fontSize: '3.6rem', fontWeight: '700', marginTop: '20px', marginBottom: '18px', lineHeight: '1.15', fontFamily: '"Playfair Display", serif'
-};
+        {step === 'processing' && <div className="processing"><div className="spinner" /><p>Opening secure checkout…</p></div>}
 
-const heroSubheadingStyle = {
-  color: '#f0fdfa', fontSize: '1.2rem', fontWeight: '400', lineHeight: '1.65', opacity: '0.95'
-};
+        {step === 'error' && (
+          <div className="processing">
+            <AlertTriangle size={32} color="#DC2626" />
+            <p>{errorMsg}</p>
+            <button className="primary-btn" onClick={() => setStep('details')}>Try again</button>
+          </div>
+        )}
 
-const consoleCardWrapperStyle = {
-  backgroundColor: '#ffffff', borderRadius: '14px', width: '100%', maxWidth: '960px', boxShadow: '0 30px 60px -15px rgba(14, 42, 27, 0.35)', overflow: 'hidden', border: '1px solid #e9e7e1'
-};
-
-const inputLabelStyle = {
-  display: 'block', fontSize: '0.72rem', fontWeight: '800', color: '#4b5563', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em'
-};
-
-const inputElementStyle = {
-  width: '100%', padding: '13px 14px', borderRadius: '6px', fontSize: '0.92rem'
-};
-
-const searchSubmitButtonStyle = {
-  backgroundColor: '#0f766e', color: '#ffffff', border: 'none', padding: '14px 24px', borderRadius: '6px', fontSize: '0.95rem', fontWeight: '700', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', boxShadow: '0 6px 20px rgba(15, 118, 110, 0.25)', height: '47px', width: '100%'
-};
-
-const inventoryLinkTriggerStyle = {
-  color: '#0f766e', fontWeight: '800', fontSize: '0.95rem', textDecoration: 'none', borderBottom: '2px solid #0f766e', paddingBottom: '3px', letterSpacing: '0.01em'
-};
-
-const packageCardElementStyle = {
-  backgroundColor: '#ffffff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(14,42,27,0.01)', display: 'flex', flexDirection: 'column'
-};
-
-const packageDurationBadgeStyle = {
-  position: 'absolute', bottom: '16px', right: '16px', backgroundColor: 'rgba(14, 42, 27, 0.85)', color: '#ffffff', padding: '5px 12px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '700', backdropFilter: 'blur(4px)'
-};
-
-const packageCardBodyStyle = {
-  padding: '26px', flexGrow: 1, display: 'flex', flexDirection: 'column', justifyXontent: 'space-between', justifyContent: 'space-between'
-};
-
-const packageLocLabelStyle = {
-  color: '#0f766e', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px'
-};
-
-const packageCardTitleStyle = {
-  fontSize: '1.35rem', color: '#0e2a1b', marginTop: '6px', marginBottom: '10px', fontWeight: '700', fontFamily: '"Playfair Display", serif'
-};
-
-const packageCardDescStyle = {
-  color: '#4b5563', fontSize: '0.88rem', lineHeight: '1.55', margin: '0 0 24px 0'
-};
-
-const packageCardFooterStyle = {
-  display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f3f2ee', paddingTop: '18px'
-};
-
-const packageCardPriceStyle = {
-  fontSize: '1.55rem', fontWeight: '800', color: '#0e2a1b'
-};
-
-const packageCardButtonStyle = {
-  backgroundColor: '#0f766e', color: '#ffffff', textDecoration: 'none', padding: '11px 20px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: '700', boxShadow: '0 4px 12px rgba(15,118,110,0.15)'
-};
-
-const metricTitleStyle = {
-  fontSize: '1.2rem', fontWeight: '700', margin: '0 0 10px 0', color: '#2dd4bf', letterSpacing: '-0.01em'
-};
-
-const metricDescStyle = {
-  color: '#94a3b8', fontSize: '0.9rem', lineHeight: '1.65', margin: 0, opacity: '0.9'
-};
+        {step === 'done' && booking && (
+          <div className="confirm">
+            <CheckCircle2 size={40} color="#16A34A" />
+            <h3>Payment received</h3>
+            <p className="modal-sub">A confirmation email is on its way to {email}.</p>
+            <div className="ticket">
+              <div className="ticket-row"><span>Reference</span><b>{booking.id}</b></div>
+              <div className="ticket-row"><span>Payment ID</span><b>{booking.paymentId}</b></div>
+              <div className="ticket-row"><span>Amount</span><b>{inr(booking.amount)}</b></div>
+            </div>
+            <button className="primary-btn" onClick={onClose}>Done</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export async function getServerSideProps() {
   try {
@@ -514,7 +321,62 @@ export async function getServerSideProps() {
     if (error) throw error;
     return { props: { initialPackages: packages || [] } };
   } catch (e) {
-    console.error('Server side database fetch bypass loop:', e.message);
+    console.error('Supabase fetch failed:', e.message);
     return { props: { initialPackages: [] } };
   }
 }
+
+const CSS = `
+* { box-sizing: border-box; }
+.app { font-family: 'Inter', sans-serif; background: #0B1D3A; min-height: 100vh; color: #F7F3E8; }
+.topbar { display:flex; align-items:center; justify-content:space-between; padding: 18px 28px; border-bottom: 1px solid rgba(247,243,232,0.1); }
+.brand { display:flex; align-items:center; gap:10px; }
+.brand-mark { width:36px; height:36px; border-radius:9px; background:#FF6B35; display:flex; align-items:center; justify-content:center; color:#0B1D3A; font-weight:800; font-family:'Rajdhani',sans-serif; }
+.brand-name { font-family:'Rajdhani', sans-serif; font-weight:700; font-size:20px; }
+.brand-name span { color:#FF6B35; }
+.brand-tag { font-size:11px; opacity:0.55; text-transform:uppercase; letter-spacing:0.5px; }
+.nav-link { color:#F7F3E8; text-decoration:none; font-size:13px; font-weight:600; opacity:0.8; }
+.hero { text-align:center; padding: 48px 20px 24px; }
+.hero h1 { font-family:'Rajdhani',sans-serif; font-size:34px; font-weight:700; margin:0 0 10px; }
+.hero p { opacity:0.65; max-width:480px; margin:0 auto; }
+.tabs { display:flex; gap:8px; padding: 0 28px; flex-wrap:wrap; justify-content:center; }
+.tab { display:flex; align-items:center; gap:7px; background:rgba(247,243,232,0.06); border:1px solid rgba(247,243,232,0.1); color:#F7F3E8; padding:10px 16px; border-radius:10px 10px 0 0; font-size:13px; font-weight:600; cursor:pointer; opacity:0.6; }
+.tab.active { opacity:1; background:rgba(247,243,232,0.1); box-shadow: inset 0 3px 0 var(--accent); }
+.content { padding: 22px 20px 60px; max-width: 900px; margin:0 auto; }
+.search-card { background:#F7F3E8; color:#0B1D3A; border-radius:14px; padding:18px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
+.field { display:flex; flex-direction:column; gap:5px; flex:1; min-width:130px; }
+.field-label { font-size:11px; text-transform:uppercase; opacity:0.6; font-weight:600; }
+.field-note { flex:1; font-size:13px; opacity:0.7; padding: 10px 0; }
+.field select, .field input, .modal input { border:1.5px solid rgba(11,29,58,0.15); border-radius:8px; padding:9px 10px; font-size:14px; background:#fff; color:#0B1D3A; }
+.swap-btn { border:1.5px solid rgba(11,29,58,0.15); background:#fff; border-radius:8px; padding:9px; cursor:pointer; }
+.search-btn { background:#FF6B35; color:#fff; border:none; border-radius:8px; padding:12px 22px; font-weight:700; cursor:pointer; }
+.search-btn:disabled { opacity:0.7; }
+.results { margin-top:20px; display:flex; flex-direction:column; gap:10px; }
+.results-head { display:flex; justify-content:space-between; font-size:12px; opacity:0.7; padding:0 4px; align-items:center; }
+.live-tag { display:flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-weight:700; }
+.live-tag.is-live { color:#16A34A; background:rgba(22,163,74,0.12); }
+.live-tag.is-demo { color:#FFB800; background:rgba(255,184,0,0.12); }
+.empty { opacity:0.5; text-align:center; padding: 30px; }
+.result-row { background:rgba(247,243,232,0.06); border:1px solid rgba(247,243,232,0.1); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.result-icon { width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.result-main { min-width:140px; flex:1; }
+.result-title { font-weight:700; font-size:14px; }
+.result-sub { font-size:12px; opacity:0.6; }
+.result-time { display:flex; align-items:center; gap:8px; font-size:13px; opacity:0.8; }
+.result-action { display:flex; align-items:center; gap:12px; }
+.price { font-weight:700; font-size:14px; }
+.result-action button { background:#FF6B35; color:#fff; border:none; padding:8px 14px; border-radius:7px; font-size:12px; font-weight:700; display:flex; align-items:center; gap:4px; cursor:pointer; }
+.modal-backdrop { position:fixed; inset:0; background:rgba(5,13,28,0.75); display:flex; align-items:center; justify-content:center; z-index:100; padding:16px; }
+.modal { background:#F7F3E8; color:#0B1D3A; border-radius:16px; padding:26px; width:100%; max-width:400px; position:relative; display:flex; flex-direction:column; gap:10px; }
+.modal h3 { font-family:'Rajdhani',sans-serif; font-size:22px; margin:0; }
+.modal-sub { font-size:12px; opacity:0.65; margin:0 0 6px; }
+.modal-close { position:absolute; top:14px; right:14px; background:rgba(11,29,58,0.06); border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; }
+.primary-btn { background:#FF6B35; color:#fff; border:none; padding:13px; border-radius:9px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; margin-top:6px; }
+.primary-btn:disabled { opacity:0.5; }
+.processing { display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; padding: 20px 0; }
+.spinner { width:30px; height:30px; border:3px solid rgba(255,107,53,0.2); border-top-color:#FF6B35; border-radius:50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.confirm { display:flex; flex-direction:column; align-items:center; text-align:center; gap:4px; }
+.ticket { width:100%; background:#fff; border-radius:10px; padding:14px; margin:12px 0; }
+.ticket-row { display:flex; justify-content:space-between; font-size:13px; padding:4px 0; }
+`;
