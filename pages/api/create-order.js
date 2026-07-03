@@ -7,10 +7,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Hardcoded keys with perfect syntax alignment
+    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+      console.error('Razorpay keys are not set in environment variables.');
+      return res.status(500).json({ message: 'Server configuration error.' });
+    }
+
     const razorpay = new Razorpay({
-      key_id: 'rzp_test_Spw4XJWqrxC66R',
-      key_secret: 'Inzt0IAKyI8ZolLaaKR0XOC3'
+      key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
 
     const { amount, currency } = req.body;
@@ -20,7 +24,7 @@ export default async function handler(req, res) {
     }
 
     const options = {
-      amount: Math.round(Number(amount) * 100), 
+      amount: Math.round(Number(amount) * 100), // amount is in rupees, Razorpay wants paise
       currency: currency || 'INR',
       receipt: `order_rcpt_${Date.now()}`,
     };
@@ -29,10 +33,10 @@ export default async function handler(req, res) {
     return res.status(200).json(order);
 
   } catch (error) {
-    console.error("Diagnostic Run Error:", error);
-    return res.status(500).json({ 
-      message: 'Razorpay rejected these explicit hardcoded keys.', 
-      error: error.message 
+    console.error('create-order error:', error);
+    return res.status(500).json({
+      message: 'Could not create Razorpay order.',
+      error: error.message,
     });
   }
 }

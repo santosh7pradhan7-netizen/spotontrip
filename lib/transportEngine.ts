@@ -89,7 +89,7 @@ export async function searchLiveFlights({ origin, destination, travelDate }: Sea
  * 2. LIVE TRAIN SEARCH INVENTORY PIPELINE (RAPIDAPI / IRCTC WRAPPER)
  */
 export async function searchLiveTrains({ origin, destination, travelDate }: SearchQueryParams) {
-  const apiKey = process.env.X_RAPIDAPI_KEY;
+  const apiKey = process.env.RAPIDAPI_KEY;
   const apiHost = process.env.X_RAPIDAPI_HOST;
 
   if (!apiKey || apiKey === 'mock_rapidapi_railway_secret_key') {

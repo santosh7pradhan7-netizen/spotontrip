@@ -23,8 +23,15 @@ export default async function handler(req, res) {
 
   try {
     const rawBody = await getRawBody(req);
-    const secret = process.env.RAZORPAY_KEY_SECRET || 'STFV7KNHiEgjl0vo1cZ7tpQ2';
-    
+
+    // Use the DEDICATED webhook secret from your Razorpay dashboard
+    // (Settings -> Webhooks), which is different from your API key secret.
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error('RAZORPAY_WEBHOOK_SECRET is not set.');
+      return res.status(500).json({ message: 'Server configuration error.' });
+    }
+
     const expectedSignature = crypto
       .createHmac('sha256', secret)
       .update(rawBody)
@@ -33,8 +40,8 @@ export default async function handler(req, res) {
     const receivedSignature = req.headers['x-razorpay-signature'];
 
     if (expectedSignature !== receivedSignature) {
-      console.error('❌ Webhook Security Intercept: Signature mismatch.');
-      return res.status(400).json({ message: 'Unauthorized execution attempt.' });
+      console.error('Webhook signature mismatch.');
+      return res.status(400).json({ message: 'Invalid signature.' });
     }
 
     const payload = JSON.parse(rawBody);
@@ -42,7 +49,7 @@ export default async function handler(req, res) {
 
     if (event === 'payment.captured') {
       const paymentEntity = payload.payload.payment.entity;
-      
+
       const orderId = paymentEntity.order_id;
       const paymentId = paymentEntity.id;
       const amountPaid = paymentEntity.amount / 100;
@@ -53,9 +60,8 @@ export default async function handler(req, res) {
       const travelDate = paymentEntity.notes?.travel_date || new Date().toISOString().split('T')[0];
       const guests = paymentEntity.notes?.total_guests || 1;
 
-      console.log(`💳 Processing transaction details for Order: ${orderId}...`);
+      console.log(`Processing payment.captured for order ${orderId}`);
 
-      // 1. Log transaction into your live Supabase table
       const { error: dbError } = await supabase
         .from('bookings')
         .insert([{
@@ -68,7 +74,7 @@ export default async function handler(req, res) {
           travel_date: travelDate,
           guests: parseInt(guests),
           amount_paid: amountPaid,
-          booking_status: 'success'
+          booking_status: 'success',
         }]);
 
       if (dbError) {
@@ -76,68 +82,55 @@ export default async function handler(req, res) {
         throw dbError;
       }
 
-      // 2. Dispatch a beautiful confirmation email ticket instantly via Resend
       try {
         const emailResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            // Your active live Resend API token key
-            'Authorization': 'Bearer re_ehD8rXLQ_GMcdXiij4WBDJazy79emykBd' 
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: 'SpotOnTrip <onboarding@resend.dev>', // Free tier default sandbox sender email
+            from: 'SpotOnTrip <onboarding@resend.dev>',
             to: [customerEmail],
-            subject: `✈️ Booking Confirmed: Your Itinerary for ${packageTitle}`,
+            subject: `Booking confirmed: ${packageTitle}`,
             html: `
               <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; color: #1e293b;">
                 <div style="text-align: center; padding-bottom: 20px; border-bottom: 2px solid #0f766e;">
-                  <h1 style="color: #0f766e; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: 0.5px;">SpotOnTrip</h1>
-                  <p style="margin: 5px 0 0 0; color: #64748b; font-size: 14px;">Your Adventure Coordinates Await</p>
+                  <h1 style="color: #0f766e; margin: 0; font-size: 28px; font-weight: 800;">SpotOnTrip</h1>
                 </div>
-                
                 <div style="padding: 30px 10px;">
-                  <h2 style="color: #0f172a; margin-top: 0;">Pack Your Bags, ${customerName}! 🎉</h2>
-                  <p style="font-size: 16px; line-height: 1.6; color: #334155;">Your transaction completed successfully, and your travel dates have been securely locked in with our Rajpura live departure routing network. Below are your booking confirmation records.</p>
-                  
+                  <h2 style="color: #0f172a; margin-top: 0;">Hi ${customerName}, you're booked.</h2>
                   <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; margin: 25px 0; border: 1px solid #f1f5f9;">
-                    <h3 style="margin-top: 0; color: #0f766e; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px;">Booking Details</h3>
-                    <p style="margin: 8px 0; font-size: 15px;"><strong>Selected Package:</strong> ${packageTitle}</p>
-                    <p style="margin: 8px 0; font-size: 15px;"><strong>Date of Departure:</strong> ${travelDate}</p>
-                    <p style="margin: 8px 0; font-size: 15px;"><strong>Total Guests Reserved:</strong> ${guests} ${guests === 1 ? 'Traveler' : 'Travelers'}</p>
-                    <p style="margin: 8px 0; font-size: 15px;"><strong>Total Amount Paid:</strong> <span style="color: #16a34a; font-weight: 700;">₹${amountPaid}</span></p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Package:</strong> ${packageTitle}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Date:</strong> ${travelDate}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Guests:</strong> ${guests}</p>
+                    <p style="margin: 8px 0; font-size: 15px;"><strong>Amount paid:</strong> ₹${amountPaid}</p>
                   </div>
-
                   <div style="background-color: #f8fafc; border-radius: 8px; padding: 20px; border: 1px solid #f1f5f9; font-family: monospace; font-size: 13px; color: #64748b;">
                     <span style="display: block; margin-bottom: 4px;"><strong>Order ID:</strong> ${orderId}</span>
-                    <span style="display: block;"><strong>Payment Gateway ID:</strong> ${paymentId}</span>
+                    <span style="display: block;"><strong>Payment ID:</strong> ${paymentId}</span>
                   </div>
                 </div>
-
                 <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; text-align: center; font-size: 13px; color: #94a3b8;">
-                  <p style="margin: 0 0 5px 0;">If you have any questions regarding itinerary timings, contact operations at support@spotontrip.com</p>
-                  <p style="margin: 0;">&copy; 2026 SpotOnTrip. All rights reserved.</p>
+                  <p style="margin: 0;">Questions? support@spotontrip.com</p>
                 </div>
               </div>
-            `
-          })
+            `,
+          }),
         });
 
         if (!emailResponse.ok) {
-          const emailErrData = await emailResponse.text();
-          console.error('Resend delivery processing roadblock:', emailErrData);
-        } else {
-          console.log(`✉️ Confirmation ticket successfully dispatched to ${customerEmail}`);
+          console.error('Resend delivery error:', await emailResponse.text());
         }
       } catch (mailErr) {
-        console.error('Email pipeline execution fault:', mailErr.message);
+        console.error('Email send failed:', mailErr.message);
       }
     }
 
     return res.status(200).json({ status: 'ok' });
 
   } catch (err) {
-    console.error('Webhook fault:', err.message);
-    return res.status(500).json({ message: 'Internal Server Sync Failure' });
+    console.error('Webhook error:', err.message);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }

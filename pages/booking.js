@@ -32,13 +32,13 @@ export default function MyBookingsPage() {
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', paddingBottom: '40px' }}>
       <nav style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link href="/dashboard" style={{ textDecoration: 'none', fontSize: '22px', fontWeight: '900', color: '#0066cc', letterSpacing: '-0.02em' }}>
+          <Link href="/" style={{ textDecoration: 'none', fontSize: '22px', fontWeight: '900', color: '#0066cc', letterSpacing: '-0.02em' }}>
             SpotOnTrip
           </Link>
           <span style={{ color: '#cbd5e1' }}>/</span>
           <span style={{ fontSize: '14px', fontWeight: '700', color: '#475569' }}>My Bookings</span>
         </div>
-        <Link href="/dashboard" style={{ textDecoration: 'none', fontSize: '13px', fontWeight: '700', color: '#0066cc', backgroundColor: '#eff6ff', padding: '8px 16px', borderRadius: '8px' }}>
+        <Link href="/" style={{ textDecoration: 'none', fontSize: '13px', fontWeight: '700', color: '#0066cc', backgroundColor: '#eff6ff', padding: '8px 16px', borderRadius: '8px' }}>
           ← Back to Search
         </Link>
       </nav>
@@ -84,7 +84,7 @@ export default function MyBookingsPage() {
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>✈️</div>
             <h3 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '18px', fontWeight: '700' }}>No bookings found</h3>
             <p style={{ margin: '0 0 20px 0', color: '#64748b', fontSize: '14px' }}>You don't have any trips listed under the "{filter}" criteria.</p>
-            <Link href="/dashboard" style={{ textDecoration: 'none', backgroundColor: '#0066cc', color: '#ffffff', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', display: 'inline-block' }}>
+            <Link href="/" style={{ textDecoration: 'none', backgroundColor: '#0066cc', color: '#ffffff', padding: '10px 20px', borderRadius: '8px', fontSize: '14px', fontWeight: '700', display: 'inline-block' }}>
               Plan a New Journey
             </Link>
           </div>
