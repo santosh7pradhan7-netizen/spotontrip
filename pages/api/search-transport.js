@@ -18,7 +18,15 @@ export default async function handler(req, res) {
   }
 
   const travelDate = date || new Date().toISOString().slice(0, 10);
-  const debug = { hasToken: !!process.env.TRAVELPAYOUTS_TOKEN, hasMarker: !!process.env.TRAVELPAYOUTS_MARKER };
+
+  // TEMPORARY diagnostics: shows only names and yes/no values, never secrets.
+  const debug = {
+    hasToken: !!process.env.TRAVELPAYOUTS_TOKEN,
+    hasMarker: !!process.env.TRAVELPAYOUTS_MARKER,
+    vercelEnv: process.env.VERCEL_ENV || null,
+    productionUrl: process.env.VERCEL_PROJECT_PRODUCTION_URL || null,
+    visibleNames: Object.keys(process.env).filter((k) => /TRAVEL|PAYOUT|MARKER|SUPABASE/i.test(k)),
+  };
 
   try {
     let results = [];
@@ -83,7 +91,7 @@ export default async function handler(req, res) {
         }
       }
     } else if (mode === 'trains') {
-      live = false;
+      live = false; // no trustworthy source connected
     } else if (mode === 'buses') {
       live = !!(process.env.BUS_API_KEY && process.env.BUS_API_ENDPOINT);
       if (live) results = await searchLiveBuses({ origin, destination, travelDate });
