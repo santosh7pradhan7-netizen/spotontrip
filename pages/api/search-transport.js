@@ -18,6 +18,7 @@ export default async function handler(req, res) {
   }
 
   const travelDate = date || new Date().toISOString().slice(0, 10);
+  const debug = { hasToken: !!process.env.TRAVELPAYOUTS_TOKEN, hasMarker: !!process.env.TRAVELPAYOUTS_MARKER };
 
   try {
     let results = [];
@@ -28,7 +29,6 @@ export default async function handler(req, res) {
       const marker = process.env.TRAVELPAYOUTS_MARKER;
 
       if (token) {
-        // Ask for the whole month: fares seen for any day in that month.
         const url =
           'https://api.travelpayouts.com/aviasales/v3/prices_for_dates' +
           `?origin=${encodeURIComponent(origin)}` +
@@ -37,10 +37,15 @@ export default async function handler(req, res) {
           '&currency=inr&sorting=price&one_way=true&limit=30' +
           `&token=${encodeURIComponent(token)}`;
 
-        const r = await fetch(url);
-        if (r.ok) {
+        try {
+          const r = await fetch(url);
+          debug.status = r.status;
           const json = await r.json();
+          debug.success = json.success;
+          debug.apiError = json.error || null;
+
           const rows = Array.isArray(json.data) ? json.data : [];
+          debug.rows = rows.length;
 
           let mapped = rows.map((f, i) => {
             const dep = f.departure_at ? new Date(f.departure_at) : null;
@@ -67,17 +72,18 @@ export default async function handler(req, res) {
             };
           });
 
-          // Prefer fares on or after the chosen date; if none, show all of the month.
           const chosen = new Date(travelDate + 'T00:00:00').getTime();
           const onOrAfter = mapped.filter((m) => m.depTime >= chosen);
           if (onOrAfter.length > 0) mapped = onOrAfter;
 
           results = mapped.slice(0, 10).map(({ depTime, ...rest }) => rest);
           live = results.length > 0;
+        } catch (e) {
+          debug.fetchError = String(e && e.message ? e.message : e);
         }
       }
     } else if (mode === 'trains') {
-      live = false; // no trustworthy source connected
+      live = false;
     } else if (mode === 'buses') {
       live = !!(process.env.BUS_API_KEY && process.env.BUS_API_ENDPOINT);
       if (live) results = await searchLiveBuses({ origin, destination, travelDate });
@@ -86,9 +92,9 @@ export default async function handler(req, res) {
     }
 
     results = results.filter((r) => !String(r.id).includes('FALLBACK'));
-    return res.status(200).json({ results, live });
+    return res.status(200).json({ results, live, debug });
   } catch (error) {
     console.error('search-transport error:', error);
-    return res.status(500).json({ message: 'Search failed', error: error.message });
+    return res.status(500).json({ message: 'Search failed', error: error.message, debug });
   }
 }
