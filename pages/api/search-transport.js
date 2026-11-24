@@ -1,6 +1,12 @@
 // pages/api/search-transport.js
 import { searchLiveBuses } from '../../lib/transportEngine';
 
+const AIRLINES = {
+  AI: 'Air India', IX: 'Air India Express', '6E': 'IndiGo', UK: 'Vistara',
+  SG: 'SpiceJet', QP: 'Akasa Air', S5: 'Star Air', '9I': 'Alliance Air',
+  EK: 'Emirates', QR: 'Qatar Airways', EY: 'Etihad', SQ: 'Singapore Airlines',
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -20,36 +26,53 @@ export default async function handler(req, res) {
     if (mode === 'flights') {
       const token = process.env.TRAVELPAYOUTS_TOKEN;
       const marker = process.env.TRAVELPAYOUTS_MARKER;
+
       if (token) {
+        // Ask for the whole month: fares seen for any day in that month.
         const url =
           'https://api.travelpayouts.com/aviasales/v3/prices_for_dates' +
           `?origin=${encodeURIComponent(origin)}` +
           `&destination=${encodeURIComponent(destination)}` +
-          `&departure_at=${encodeURIComponent(travelDate)}` +
-          '&currency=inr&sorting=price&one_way=true&limit=10' +
+          `&departure_at=${encodeURIComponent(travelDate.slice(0, 7))}` +
+          '&currency=inr&sorting=price&one_way=true&limit=30' +
           `&token=${encodeURIComponent(token)}`;
 
         const r = await fetch(url);
         if (r.ok) {
           const json = await r.json();
           const rows = Array.isArray(json.data) ? json.data : [];
-          results = rows.map((f, i) => {
+
+          let mapped = rows.map((f, i) => {
             const dep = f.departure_at ? new Date(f.departure_at) : null;
             const mins = Number(f.duration) || 0;
+            const stops = Number(f.transfers) || 0;
+            const stopsText = stops === 0 ? 'Non-stop' : `${stops} stop${stops > 1 ? 's' : ''}`;
+            const durationText = mins ? `${Math.floor(mins / 60)}h ${mins % 60}m` : '';
             const link = f.link
               ? `https://www.aviasales.com${f.link}${f.link.includes('?') ? '&' : '?'}marker=${marker || ''}`
               : null;
+
             return {
               id: `TP-${i}-${f.flight_number || ''}`,
-              carrier: f.airline || 'Airline',
+              depTime: dep ? dep.getTime() : 0,
+              carrier: AIRLINES[f.airline] || f.airline || 'Airline',
               flightNo: `${f.airline || ''}${f.flight_number ? '-' + f.flight_number : ''}`,
-              departure: dep ? dep.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '',
+              departure: dep
+                ? dep.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                : '',
               arrival: '',
-              duration: mins ? `${Math.floor(mins / 60)}h ${mins % 60}m` : '',
+              duration: [durationText, stopsText].filter(Boolean).join(' · '),
               price: Math.round(Number(f.price)),
               link,
             };
           });
+
+          // Prefer fares on or after the chosen date; if none, show all of the month.
+          const chosen = new Date(travelDate + 'T00:00:00').getTime();
+          const onOrAfter = mapped.filter((m) => m.depTime >= chosen);
+          if (onOrAfter.length > 0) mapped = onOrAfter;
+
+          results = mapped.slice(0, 10).map(({ depTime, ...rest }) => rest);
           live = results.length > 0;
         }
       }
