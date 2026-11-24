@@ -1,15 +1,20 @@
 // pages/flights.js
 import { useState } from 'react';
 import Head from 'next/head';
-import { Plane, ArrowLeftRight, ChevronRight, Activity } from 'lucide-react';
+import { Plane, ArrowLeftRight } from 'lucide-react';
 import SiteLayout from '../components/SiteLayout';
-import BookingModal from '../components/BookingModal';
 
 const CITIES = [
   { name: 'Delhi', code: 'DEL' }, { name: 'Mumbai', code: 'BOM' }, { name: 'Bengaluru', code: 'BLR' },
   { name: 'Hyderabad', code: 'HYD' }, { name: 'Chennai', code: 'MAA' }, { name: 'Kolkata', code: 'CCU' },
   { name: 'Pune', code: 'PNQ' }, { name: 'Goa', code: 'GOI' }, { name: 'Jaipur', code: 'JAI' }, { name: 'Kochi', code: 'COK' },
 ];
+
+// Paste your Travelpayouts flight search link between the quotes below
+// (from your dashboard: Tools -> White Label / search widget).
+// While it is empty, the "Search on our partner" button stays hidden.
+const PARTNER_URL = '';
+
 const inr = (n) => '₹' + Number(n).toLocaleString('en-IN');
 
 export default function Flights() {
@@ -17,9 +22,7 @@ export default function Flights() {
   const [to, setTo] = useState(CITIES[1]);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [results, setResults] = useState(null);
-  const [live, setLive] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selected, setSelected] = useState(null);
 
   const swap = () => { setFrom(to); setTo(from); };
 
@@ -29,7 +32,6 @@ export default function Flights() {
       const res = await fetch(`/api/search-transport?mode=flights&origin=${from.code}&destination=${to.code}&date=${date}`);
       const data = await res.json();
       setResults(data.results || []);
-      setLive(!!data.live);
     } catch { setResults([]); } finally { setLoading(false); }
   };
 
@@ -37,8 +39,8 @@ export default function Flights() {
     <SiteLayout>
       <Head><title>Flights | SpotOnTrip</title></Head>
       <div className="sot-hero">
-        <h1>Book flights across India</h1>
-        <p>Live fares via Amadeus, instant UPI/card checkout.</p>
+        <h1>Search flights across India</h1>
+        <p>Compare fares from airlines and travel partners.</p>
       </div>
 
       <div className="sot-search-card">
@@ -64,11 +66,21 @@ export default function Flights() {
 
       {results && (
         <div className="sot-results">
-          <div className="sot-results-head">
-            <span>{results.length} flights</span>
-            <span className={`sot-live-tag ${live ? 'is-live' : 'is-demo'}`}><Activity size={12} /> {live ? 'Live via Amadeus' : 'Demo data — Amadeus not reachable'}</span>
-          </div>
-          {results.length === 0 && <div className="sot-empty">No flights found for this route.</div>}
+          {results.length === 0 && (
+            <div className="sot-empty">
+              <p>We couldn't load live fares on SpotOnTrip right now.</p>
+              {PARTNER_URL && (
+                <a
+                  href={PARTNER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
+                  style={{ display: 'inline-block', marginTop: 10, padding: '10px 18px', borderRadius: 10, background: '#FF6B35', color: '#fff', fontWeight: 700, textDecoration: 'none' }}
+                >
+                  Search live fares on our partner
+                </a>
+              )}
+            </div>
+          )}
           {results.map((f) => (
             <div className="sot-row" key={f.id}>
               <div className="sot-row-icon" style={{ background: '#FF6B3522', color: '#FF6B35' }}><Plane size={18} /></div>
@@ -79,14 +91,11 @@ export default function Flights() {
               <div className="sot-row-time"><span>{f.departure}</span><span>→</span><span>{f.arrival}</span></div>
               <div className="sot-row-action">
                 <span className="sot-price">{inr(f.price)}</span>
-                <button onClick={() => setSelected(f)}>Select <ChevronRight size={14} /></button>
               </div>
             </div>
           ))}
         </div>
       )}
-
-      {selected && <BookingModal title={`${selected.carrier} ${selected.flightNo}`} amount={selected.price} onClose={() => setSelected(null)} />}
     </SiteLayout>
   );
 }
