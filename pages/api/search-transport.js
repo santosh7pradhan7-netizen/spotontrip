@@ -19,20 +19,21 @@ export default async function handler(req, res) {
     let live = false;
 
     if (mode === 'flights') {
-      results = await searchLiveFlights(params);
       live = !!(process.env.AMADEUS_CLIENT_ID && process.env.AMADEUS_CLIENT_SECRET);
+      if (live) results = await searchLiveFlights(params);
     } else if (mode === 'trains') {
-      results = await searchLiveTrains(params);
-      live = !!process.env.RAPIDAPI_KEY;
+      // Train prices in transportEngine are random numbers, so never show them as real.
+      live = false;
     } else if (mode === 'buses') {
-      results = await searchLiveBuses(params);
-      live = !!process.env.BUS_API_KEY;
+      live = !!(process.env.BUS_API_KEY && process.env.BUS_API_ENDPOINT);
+      if (live) results = await searchLiveBuses(params);
     } else {
       return res.status(400).json({ message: 'mode must be flights, trains, or buses' });
     }
 
-    // `live` tells the frontend whether this came from a real provider or the
-    // built-in fallback data, so the UI can be honest about which one it's showing.
+    // Remove any placeholder results so customers never see fake options.
+    results = results.filter((r) => !String(r.id).includes('FALLBACK'));
+
     return res.status(200).json({ results, live });
   } catch (error) {
     console.error('search-transport error:', error);
