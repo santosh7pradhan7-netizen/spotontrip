@@ -10,10 +10,35 @@ const CITIES = [
   { name: 'Pune', code: 'PNQ' }, { name: 'Goa', code: 'GOI' }, { name: 'Jaipur', code: 'JAI' }, { name: 'Kochi', code: 'COK' },
 ];
 
-// Optional: paste your Travelpayouts flight search link between the quotes below
-// (Travelpayouts dashboard -> Tools -> White Label / search widget).
-// While it is empty, the "Search on our partner" button stays hidden.
-const PARTNER_URL = '';
+// Your Travelpayouts White Label (runs on your own subdomain).
+const WL_BASE = 'https://flights.spotontrip.com';
+
+const MONTHS = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+};
+
+// "2026-12-10" -> "1012" (DDMM, the format the White Label expects)
+function ddmmFromIso(iso) {
+  const parts = String(iso || '').slice(0, 10).split('-');
+  if (parts.length !== 3 || !parts[1] || !parts[2]) return null;
+  return parts[2] + parts[1];
+}
+
+// "16 Dec, 02:25 pm" -> "1612"
+function ddmmFromDeparture(text) {
+  const m = /^(\d{1,2})\s+([A-Za-z]{3})/.exec(String(text || '').trim());
+  if (!m) return null;
+  const mm = MONTHS[m[2].toLowerCase()];
+  if (!mm) return null;
+  return m[1].padStart(2, '0') + mm;
+}
+
+// Opens the White Label with the search already filled in (1 adult, economy).
+function whiteLabelLink(origin, destination, ddmm) {
+  if (!origin || !destination || !ddmm) return WL_BASE;
+  return `${WL_BASE}/?flightSearch=${origin}${ddmm}${destination}1`;
+}
 
 const inr = (n) => '₹' + Number(n).toLocaleString('en-IN');
 
@@ -45,6 +70,22 @@ export default function Flights() {
       setLoading(false);
     }
   };
+
+  const liveSearchUrl = whiteLabelLink(from.code, to.code, ddmmFromIso(date));
+
+  const liveSearchButton = (
+    <a
+      href={liveSearchUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'inline-block', marginTop: 10, padding: '10px 18px', borderRadius: 10,
+        background: '#FF6B35', color: '#fff', fontWeight: 700, textDecoration: 'none',
+      }}
+    >
+      Search live fares on SpotOnTrip Flights
+    </a>
+  );
 
   return (
     <SiteLayout>
@@ -90,8 +131,9 @@ export default function Flights() {
             <div className="sot-results-head">
               <span>{results.length} fares found</span>
               <span style={{ fontSize: 12, opacity: 0.65 }}>
-                Prices were seen recently and can change. The final price is confirmed on the partner site.
+                These prices were seen recently and can change. Check live fares for today&rsquo;s price in ₹.
               </span>
+              {from.code !== to.code && <div>{liveSearchButton}</div>}
             </div>
           )}
 
@@ -100,58 +142,51 @@ export default function Flights() {
               <p>
                 {from.code === to.code
                   ? 'Please choose two different cities.'
-                  : "We couldn't find recent fares for this route and date. Try another date or route."}
+                  : "We couldn't find recent fares for this route and date. Try another date or route, or search live fares below."}
               </p>
-              {PARTNER_URL && from.code !== to.code && (
-                <a
-                  href={PARTNER_URL}
-                  target="_blank"
-                  rel="noopener noreferrer sponsored"
-                  style={{
-                    display: 'inline-block', marginTop: 10, padding: '10px 18px', borderRadius: 10,
-                    background: '#FF6B35', color: '#fff', fontWeight: 700, textDecoration: 'none',
-                  }}
-                >
-                  Search live fares on our partner
-                </a>
-              )}
+              {from.code !== to.code && liveSearchButton}
             </div>
           )}
 
-          {results.map((f) => (
-            <div className="sot-row" key={f.id}>
-              <div className="sot-row-icon" style={{ background: '#FF6B3522', color: '#FF6B35' }}>
-                <Plane size={18} />
-              </div>
-
-              <div className="sot-row-main">
-                <div className="sot-row-title">{f.carrier}</div>
-                <div className="sot-row-sub">
-                  {[f.flightNo, f.duration].filter(Boolean).join(' · ')}
+          {results.map((f) => {
+            const dealUrl = whiteLabelLink(
+              from.code,
+              to.code,
+              ddmmFromDeparture(f.departure) || ddmmFromIso(date)
+            );
+            return (
+              <div className="sot-row" key={f.id}>
+                <div className="sot-row-icon" style={{ background: '#FF6B3522', color: '#FF6B35' }}>
+                  <Plane size={18} />
                 </div>
-              </div>
 
-              <div className="sot-row-time">
-                <span>{f.departure}</span>
-                {f.arrival && <span>→</span>}
-                {f.arrival && <span>{f.arrival}</span>}
-              </div>
+                <div className="sot-row-main">
+                  <div className="sot-row-title">{f.carrier}</div>
+                  <div className="sot-row-sub">
+                    {[f.flightNo, f.duration].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
 
-              <div className="sot-row-action">
-                <span className="sot-price">from {inr(f.price)}</span>
-                {f.link && (
+                <div className="sot-row-time">
+                  <span>{f.departure}</span>
+                  {f.arrival && <span>→</span>}
+                  {f.arrival && <span>{f.arrival}</span>}
+                </div>
+
+                <div className="sot-row-action">
+                  <span className="sot-price">from {inr(f.price)}</span>
                   <a
-                    href={f.link}
+                    href={dealUrl}
                     target="_blank"
-                    rel="noopener noreferrer sponsored"
+                    rel="noopener noreferrer"
                     style={{ marginLeft: 10, fontWeight: 700, color: '#FF6B35', textDecoration: 'none' }}
                   >
-                    View deal →
+                    Check live fare →
                   </a>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </SiteLayout>
